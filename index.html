@@ -1,4 +1,3 @@
-成品
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -41,6 +40,7 @@ html, body {
   position: relative;
 }
 
+/* ===== 顶部按钮 ===== */
 .top-btn {
   position: absolute;
   top: 0;
@@ -53,6 +53,11 @@ html, body {
   border-radius: 12px;
 }
 
+.top-btn:active {
+  background: rgba(0,0,0,0.06);
+  transform: scale(0.92);
+}
+
 #back { left: 2px; }
 #more { right: 2px; }
 
@@ -61,7 +66,7 @@ html, body {
   font-weight: 500;
 }
 
-/* ===== 聊天 ===== */
+/* ===== 聊天区 ===== */
 #chat {
   position: fixed;
   left: 0;
@@ -83,7 +88,7 @@ html, body {
 .left { justify-content: flex-start; }
 .right { justify-content: flex-end; }
 
-/* ===== 头像（保留你原来的） ===== */
+/* ===== 头像（🔥已升级） ===== */
 .avatar {
   width: 42px;
   height: 42px;
@@ -116,22 +121,49 @@ html, body {
 .left .bubble { background: #fff; }
 .right .bubble { background: #95ec69; }
 
-/* ===== 输入栏（完全保留） ===== */
+.left .bubble::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 12px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #fff;
+}
+
+.right .bubble::before {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: 12px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #95ec69;
+}
+
+/* ===== 输入栏 ===== */
 #bar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+
   display: flex;
   align-items: center;
+
   padding: 8px;
   padding-bottom: calc(8px + env(safe-area-inset-bottom));
+
   background: #f7f7f7;
   border-top: 1px solid rgba(0,0,0,0.08);
+
+  width: 100%;
+  z-index: 1000;
 }
 
 #text {
   flex: 1;
+  min-width: 0;
   height: 36px;
   border: none;
   border-radius: 6px;
@@ -150,13 +182,13 @@ button {
   font-size: 15px;
 }
 
-/* 图片 */
+/* ===== 图片 ===== */
 .msg-img img {
   max-width: 180px;
   border-radius: 10px;
 }
 
-/* 预览 */
+/* ===== 预览 ===== */
 #imgPreview {
   position: fixed;
   inset: 0;
@@ -165,6 +197,11 @@ button {
   align-items: center;
   justify-content: center;
   z-index: 99999;
+}
+
+#imgPreview img {
+  max-width: 95%;
+  max-height: 95%;
 }
 </style>
 </head>
@@ -177,7 +214,11 @@ button {
 
     <div id="back" class="top-btn" onclick="goBack()">
       <svg viewBox="0 0 24 24" width="22" height="22">
-        <path d="M15.5 19l-7-7 7-7" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M15.5 19l-7-7 7-7"
+          fill="none"
+          stroke="black"
+          stroke-width="2.2"
+          stroke-linecap="round"/>
       </svg>
     </div>
 
@@ -185,15 +226,16 @@ button {
 
     <div id="more" class="top-btn">
       <svg viewBox="0 0 24 24" width="22" height="22">
-        <circle cx="5" cy="12" r="1.8"/>
-        <circle cx="12" cy="12" r="1.8"/>
-        <circle cx="19" cy="12" r="1.8"/>
+        <circle cx="5" cy="12" r="1.8" fill="black"/>
+        <circle cx="12" cy="12" r="1.8" fill="black"/>
+        <circle cx="19" cy="12" r="1.8" fill="black"/>
       </svg>
     </div>
 
   </div>
 </div>
 
+<!-- 聊天 -->
 <div id="chat"></div>
 
 <!-- 输入 -->
@@ -204,6 +246,7 @@ button {
   <button onclick="send()">发送</button>
 </div>
 
+<!-- 图片预览 -->
 <div id="imgPreview" onclick="closePreview()">
   <img id="previewImg">
 </div>
@@ -211,92 +254,25 @@ button {
 <script>
 const chat = document.getElementById("chat");
 
-/* ===== 用户ID（不影响UI） ===== */
-let userId = localStorage.getItem("uid");
-if(!userId){
-  userId = "u_" + Math.random().toString(36).slice(2,10);
-  localStorage.setItem("uid", userId);
+/* 🔥头像配置 */
+const myAvatar = "https://i.pravatar.cc/100?img=12";
+const otherAvatar = "https://i.pravatar.cc/100?img=3";
+
+/* 返回 */
+function goBack(){
+  if (history.length > 1) history.back();
+  else window.location.href = "/";
 }
 
-const adminId = "admin";
-
-/* ===== WebSocket（后端） ===== */
-const socket = new WebSocket("wss://page-c4hm.onrender.com");
-
-/* ===== 初始化 ===== */
-socket.onopen = ()=>{
-  socket.send(JSON.stringify({
-    type:"init",
-    userId,
-    adminId
-  }));
-
-  socket.send(JSON.stringify({
-    type:"history",
-    userId
-  }));
-};
-
-/* ===== 收消息 ===== */
-socket.onmessage = (e)=>{
-  const data = JSON.parse(e.data);
-
-  if(data.type==="msg"){
-    render(data.text, data.from===userId?"right":"left");
-  }
-
-  if(data.type==="img"){
-    renderImg(data.src, data.from===userId?"right":"left");
-  }
-
-  if(data.type==="history"){
-    data.list.forEach(m=>{
-      if(m.type==="msg") render(m.text, m.from===userId?"right":"left");
-      if(m.type==="img") renderImg(m.src, m.from===userId?"right":"left");
-    });
-  }
-};
-
-/* ===== 发送 ===== */
-function send(){
-  const v=document.getElementById("text").value.trim();
-  if(!v) return;
-
-  socket.send(JSON.stringify({
-    type:"msg",
-    from:userId,
-    to:adminId,
-    text:v,
-    time:Date.now()
-  }));
-
-  document.getElementById("text").value="";
+/* 滚动 */
+function scrollBottom(){
+  setTimeout(()=>{
+    chat.scrollTop = chat.scrollHeight;
+  }, 30);
 }
 
-/* ===== 上传（🔥完全保留） ===== */
-function pickImg(){
-  document.getElementById("file").click();
-}
-
-document.getElementById("file").onchange=function(){
-  const file=this.files[0];
-  if(!file) return;
-
-  const reader=new FileReader();
-  reader.onload=(e)=>{
-    socket.send(JSON.stringify({
-      type:"img",
-      from:userId,
-      to:adminId,
-      src:e.target.result,
-      time:Date.now()
-    }));
-  };
-  reader.readAsDataURL(file);
-};
-
-/* ===== 渲染文本 ===== */
-function render(text,type){
+/* 消息 */
+function addMsg(text,type){
   const row=document.createElement("div");
   row.className="row "+type;
 
@@ -304,10 +280,7 @@ function render(text,type){
   avatar.className="avatar";
 
   const img=document.createElement("img");
-  img.src = type==="right"
-    ?"https://i.pravatar.cc/100?img=12"
-    :"https://i.pravatar.cc/100?img=3";
-
+  img.src = type === "right" ? myAvatar : otherAvatar;
   avatar.appendChild(img);
 
   const bubble=document.createElement("div");
@@ -323,11 +296,11 @@ function render(text,type){
   }
 
   chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
+  scrollBottom();
 }
 
-/* ===== 渲染图片 ===== */
-function renderImg(src,type){
+/* 图片消息 */
+function addImage(src,type){
   const row=document.createElement("div");
   row.className="row "+type;
 
@@ -335,10 +308,7 @@ function renderImg(src,type){
   avatar.className="avatar";
 
   const img=document.createElement("img");
-  img.src = type==="right"
-    ?"https://i.pravatar.cc/100?img=12"
-    :"https://i.pravatar.cc/100?img=3";
-
+  img.src = type === "right" ? myAvatar : otherAvatar;
   avatar.appendChild(img);
 
   const box=document.createElement("div");
@@ -346,22 +316,191 @@ function renderImg(src,type){
 
   const img2=document.createElement("img");
   img2.src=src;
+  img2.onclick=()=>openPreview(src);
 
   box.appendChild(img2);
 
-  row.appendChild(type==="left"?avatar:box);
-  row.appendChild(type==="left"?box:avatar);
+  if(type==="left"){
+    row.appendChild(avatar);
+    row.appendChild(box);
+  }else{
+    row.appendChild(box);
+    row.appendChild(avatar);
+  }
+
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+/* 发送 */
+function send(){
+  const v=document.getElementById("text").value.trim();
+  if(!v) return;
+  addMsg(v,"right");
+  document.getElementById("text").value="";
+}
+
+/* 图片 */
+function pickImg(){
+  docum
+
+const chat = document.getElementById("chat");
+
+/* ===== 用户ID ===== */
+let userId = localStorage.getItem("uid");
+if (!userId) {
+  userId = "u_" + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem("uid", userId);
+}
+
+/* ===== 房间ID（关键） ===== */
+const roomId = "room_" + userId;
+
+/* ===== WebSocket（你的 Render 地址） ===== */
+const socket = new WebSocket("wss://page-c4hm.onrender.com");
+
+/* ===== 连接 ===== */
+socket.onopen = () => {
+  socket.send(JSON.stringify({
+    type: "join",
+    userId,
+    roomId
+  }));
+
+  socket.send(JSON.stringify({
+    type: "history",
+    roomId
+  }));
+};
+
+/* ===== 收消息 ===== */
+socket.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+
+  if (data.type === "msg") {
+    addMsg(data.text, data.from === userId ? "right" : "left");
+  }
+
+  if (data.type === "img") {
+    addImage(data.src, data.from === userId ? "right" : "left");
+  }
+
+  if (data.type === "history") {
+    data.list.forEach(m => {
+      if (m.type === "msg") addMsg(m.text, m.from === userId ? "right" : "left");
+      if (m.type === "img") addImage(m.src, m.from === userId ? "right" : "left");
+    });
+  }
+};
+
+/* ===== 发送文字 ===== */
+function send() {
+  const v = document.getElementById("text").value.trim();
+  if (!v) return;
+
+  socket.send(JSON.stringify({
+    type: "msg",
+    from: userId,
+    roomId,
+    text: v,
+    time: Date.now()
+  }));
+
+  document.getElementById("text").value = "";
+}
+
+/* ===== 图片 ===== */
+function pickImg() {
+  document.getElementById("file").click();
+}
+
+document.getElementById("file").onchange = function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    socket.send(JSON.stringify({
+      type: "img",
+      from: userId,
+      roomId,
+      src: e.target.result,
+      time: Date.now()
+    }));
+  };
+  reader.readAsDataURL(file);
+};
+
+/* ===== 渲染文字 ===== */
+function addMsg(text, type) {
+  const row = document.createElement("div");
+  row.className = "row " + type;
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+
+  const img = document.createElement("img");
+  img.src = type === "right"
+    ? "https://i.pravatar.cc/100?img=12"
+    : "https://i.pravatar.cc/100?img=3";
+
+  avatar.appendChild(img);
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.innerText = text;
+
+  if (type === "left") {
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+  } else {
+    row.appendChild(bubble);
+    row.appendChild(avatar);
+  }
+
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ===== 渲染图片 ===== */
+function addImage(src, type) {
+  const row = document.createElement("div");
+  row.className = "row " + type;
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+
+  const img = document.createElement("img");
+  img.src = type === "right"
+    ? "https://i.pravatar.cc/100?img=12"
+    : "https://i.pravatar.cc/100?img=3";
+
+  avatar.appendChild(img);
+
+  const box = document.createElement("div");
+  box.className = "msg-img";
+
+  const img2 = document.createElement("img");
+  img2.src = src;
+
+  box.appendChild(img2);
+
+  if (type === "left") {
+    row.appendChild(avatar);
+    row.appendChild(box);
+  } else {
+    row.appendChild(box);
+    row.appendChild(avatar);
+  }
 
   chat.appendChild(row);
   chat.scrollTop = chat.scrollHeight;
 }
 
 /* ===== 返回 ===== */
-function goBack(){
-  if(history.length>1) history.back();
-  else location.href="/";
+function goBack() {
+  if (history.length > 1) history.back();
+  else location.href = "/";
 }
-</script>
-
-</body>
-</html>
+  res.send("Chat server running");
+}
