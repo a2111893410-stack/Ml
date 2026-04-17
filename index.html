@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
-<title>联系客服</title>
+<title>在线客服</title>
 <style>
-/* 完全复用你第一版的 CSS */
+/* 复用你第一版的经典 CSS */
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #ededed; font-family: -apple-system, BlinkMacSystemFont; -webkit-text-size-adjust: 100%; }
 #top { position: fixed; top: 0; left: 0; right: 0; height: 44px; padding-top: env(safe-area-inset-top); background: #ededed; border-bottom: 0.5px solid rgba(0,0,0,0.06); z-index: 999; backdrop-filter: blur(10px); }
 #top-inner { height: 44px; display: flex; align-items: center; justify-content: center; position: relative; }
 #title { font-size: 17px; font-weight: 500; }
-#chat { position: fixed; left: 0; right: 0; top: calc(44px + env(safe-area-inset-top)); bottom: calc(60px + env(safe-area-inset-bottom)); overflow-y: auto; padding: 10px 8px; -webkit-overflow-scrolling: touch; }
+#chat { position: fixed; left: 0; right: 0; top: calc(44px + env(safe-area-inset-top)); bottom: 60px; overflow-y: auto; padding: 10px 8px; -webkit-overflow-scrolling: touch; }
 .row { display: flex; margin: 10px 0; align-items: flex-start; }
 .left { justify-content: flex-start; }
 .right { justify-content: flex-end; }
@@ -23,25 +23,25 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #ededed; fon
 #bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); background: #f7f7f7; border-top: 1px solid rgba(0,0,0,0.08); z-index: 1000; }
 #text { flex: 1; min-width: 0; height: 36px; border: none; border-radius: 6px; padding: 0 10px; font-size: 15px; outline: none; }
 button { margin-left: 6px; background: #07c160; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; font-size: 15px; }
-.msg-img img { max-width: 180px; border-radius: 10px; }
 </style>
 </head>
 <body>
 <div id="top"><div id="top-inner"><div id="title">在线客服</div></div></div>
 <div id="chat"></div>
 <div id="bar">
-    <input id="text" placeholder="输入消息..." autocomplete="off">
-    <input type="file" id="file" accept="image/*" hidden>
-    <button onclick="document.getElementById('file').click()">+</button>
+    <input id="text" placeholder="描述您的问题..." autocomplete="off">
     <button onclick="send()">发送</button>
 </div>
 
 <script>
-const chat = document.getElementById("chat");
-const myId = localStorage.getItem('chat_uid') || 'u' + Math.random().toString(36).substr(2, 5);
-localStorage.setItem('chat_uid', myId);
+const chatBox = document.getElementById("chat");
+// 1. 生成或读取唯一识别码 (UID)
+let myId = localStorage.getItem('chat_uid');
+if(!myId){
+    myId = '访客-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+    localStorage.setItem('chat_uid', myId);
+}
 
-// 改成你的 Render 地址
 const socket = new WebSocket('wss://page-c4hm.onrender.com');
 
 socket.onopen = () => {
@@ -52,27 +52,25 @@ socket.onopen = () => {
 socket.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.type === "history") {
-        chat.innerHTML = "";
-        data.list.forEach(m => addMsgDOM(m));
-    } else if (data.type === "msg" || data.type === "img") {
-        addMsgDOM(data);
+        chatBox.innerHTML = "";
+        data.list.forEach(m => renderMsg(m));
+    } else {
+        renderMsg(data);
     }
 };
 
-function addMsgDOM(m) {
+function renderMsg(m) {
     const isMe = m.from === myId;
     const row = document.createElement("div");
     row.className = "row " + (isMe ? "right" : "left");
     const avatar = isMe ? "https://i.pravatar.cc/100?img=12" : "https://i.pravatar.cc/100?img=3";
     
-    let html = isMe ? '' : `<div class="avatar"><img src="${avatar}"></div>`;
-    if(m.type === "msg") html += `<div class="bubble">${m.text}</div>`;
-    else html += `<div class="msg-img"><img src="${m.src}"></div>`;
-    if(isMe) html += `<div class="avatar"><img src="${avatar}"></div>`;
+    row.innerHTML = isMe ? 
+        `<div class="bubble">${m.text}</div><div class="avatar"><img src="${avatar}"></div>` :
+        `<div class="avatar"><img src="${avatar}"></div><div class="bubble">${m.text}</div>`;
     
-    row.innerHTML = html;
-    chat.appendChild(row);
-    chat.scrollTop = chat.scrollHeight;
+    chatBox.appendChild(row);
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function send() {
@@ -81,12 +79,6 @@ function send() {
     socket.send(JSON.stringify({ from: myId, to: "admin", type: "msg", text: t.value }));
     t.value = "";
 }
-
-document.getElementById("file").onchange = function() {
-    const reader = new FileReader();
-    reader.onload = (e) => socket.send(JSON.stringify({ from: myId, to: "admin", type: "img", src: e.target.result }));
-    reader.readAsDataURL(this.files[0]);
-};
 </script>
 </body>
 </html>
