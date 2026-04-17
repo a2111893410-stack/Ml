@@ -40,7 +40,7 @@ html, body {
   position: relative;
 }
 
-/* ===== 顶部按钮（SVG高级版） ===== */
+/* ===== 顶部按钮 ===== */
 .top-btn {
   position: absolute;
   top: 0;
@@ -49,15 +49,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-
   -webkit-tap-highlight-color: transparent;
   border-radius: 12px;
-
-  transition: all 0.15s ease;
-}
-
-.top-btn svg {
-  display: block;
 }
 
 .top-btn:active {
@@ -65,7 +58,6 @@ html, body {
   transform: scale(0.92);
 }
 
-/* 左右位置 */
 #back { left: 2px; }
 #more { right: 2px; }
 
@@ -96,13 +88,20 @@ html, body {
 .left { justify-content: flex-start; }
 .right { justify-content: flex-end; }
 
-/* ===== 头像 ===== */
+/* ===== 头像（🔥已升级） ===== */
 .avatar {
   width: 42px;
   height: 42px;
-  border-radius: 6px;
-  background: #ccc;
+  border-radius: 8px;
+  overflow: hidden;
   flex-shrink: 0;
+  background: #eee;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .left .avatar { margin-right: 6px; }
@@ -213,21 +212,18 @@ button {
 <div id="top">
   <div id="top-inner">
 
-    <!-- 返回键 SVG -->
     <div id="back" class="top-btn" onclick="goBack()">
       <svg viewBox="0 0 24 24" width="22" height="22">
         <path d="M15.5 19l-7-7 7-7"
           fill="none"
           stroke="black"
           stroke-width="2.2"
-          stroke-linecap="round"
-          stroke-linejoin="round"/>
+          stroke-linecap="round"/>
       </svg>
     </div>
 
     <div id="title">管理员</div>
 
-    <!-- 菜单键 SVG -->
     <div id="more" class="top-btn">
       <svg viewBox="0 0 24 24" width="22" height="22">
         <circle cx="5" cy="12" r="1.8" fill="black"/>
@@ -258,27 +254,34 @@ button {
 <script>
 const chat = document.getElementById("chat");
 
-/* 返回功能 */
+/* 🔥头像配置 */
+const myAvatar = "https://i.pravatar.cc/100?img=12";
+const otherAvatar = "https://i.pravatar.cc/100?img=3";
+
+/* 返回 */
 function goBack(){
-  if (history.length > 1) {
-    history.back();
-  } else {
-    window.location.href = "/";
-  }
+  if (history.length > 1) history.back();
+  else window.location.href = "/";
 }
 
+/* 滚动 */
 function scrollBottom(){
   setTimeout(()=>{
     chat.scrollTop = chat.scrollHeight;
   }, 30);
 }
 
+/* 消息 */
 function addMsg(text,type){
   const row=document.createElement("div");
   row.className="row "+type;
 
   const avatar=document.createElement("div");
   avatar.className="avatar";
+
+  const img=document.createElement("img");
+  img.src = type === "right" ? myAvatar : otherAvatar;
+  avatar.appendChild(img);
 
   const bubble=document.createElement("div");
   bubble.className="bubble";
@@ -296,6 +299,7 @@ function addMsg(text,type){
   scrollBottom();
 }
 
+/* 图片消息 */
 function addImage(src,type){
   const row=document.createElement("div");
   row.className="row "+type;
@@ -303,14 +307,18 @@ function addImage(src,type){
   const avatar=document.createElement("div");
   avatar.className="avatar";
 
+  const img=document.createElement("img");
+  img.src = type === "right" ? myAvatar : otherAvatar;
+  avatar.appendChild(img);
+
   const box=document.createElement("div");
   box.className="msg-img";
 
-  const img=document.createElement("img");
-  img.src=src;
-  img.onclick=()=>openPreview(src);
+  const img2=document.createElement("img");
+  img2.src=src;
+  img2.onclick=()=>openPreview(src);
 
-  box.appendChild(img);
+  box.appendChild(img2);
 
   if(type==="left"){
     row.appendChild(avatar);
@@ -324,6 +332,7 @@ function addImage(src,type){
   scrollBottom();
 }
 
+/* 发送 */
 function send(){
   const v=document.getElementById("text").value.trim();
   if(!v) return;
@@ -331,6 +340,7 @@ function send(){
   document.getElementById("text").value="";
 }
 
+/* 图片 */
 function pickImg(){
   document.getElementById("file").click();
 }
@@ -346,6 +356,7 @@ document.getElementById("file").onchange=function(){
   reader.readAsDataURL(file);
 };
 
+/* 预览 */
 function openPreview(src){
   document.getElementById("previewImg").src = src;
   document.getElementById("imgPreview").style.display = "flex";
