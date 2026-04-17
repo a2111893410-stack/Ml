@@ -3,89 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>客服管理后台</title>
+<title>客服管理系统 - 稳定版</title>
 <style>
-    body { display: flex; height: 100vh; margin: 0; font-family: -apple-system; background: #f0f0f0; }
+    body { display: flex; height: 100vh; margin: 0; font-family: -apple-system, sans-serif; background: #f0f0f0; }
     /* 左侧列表 */
-    #sidebar { width: 200px; background: #2e2e2e; color: #fff; display: flex; flex-direction: column; }
-    #sidebar-head { padding: 20px 15px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #333; }
+    #sidebar { width: 180px; background: #2e2e2e; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+    #sidebar-head { padding: 15px; font-size: 14px; color: #888; border-bottom: 1px solid #333; }
     #user-list { flex: 1; overflow-y: auto; }
-    .user-card { padding: 15px; border-bottom: 1px solid #383838; cursor: pointer; transition: 0.3s; font-size: 14px; }
+    .user-card { padding: 15px 10px; border-bottom: 1px solid #383838; cursor: pointer; font-size: 13px; color: #ccc; }
     .user-card:hover { background: #3d3d3d; }
-    .user-card.active { background: #07c160; }
+    .user-card.active { background: #07c160; color: #fff; font-weight: bold; }
 
     /* 右侧窗口 */
     #chat-area { flex: 1; display: flex; flex-direction: column; background: #ededed; }
-    #chat-header { height: 50px; background: #fff; display: flex; align-items: center; padding: 0 20px; font-weight: bold; border-bottom: 1px solid #ddd; }
-    #messages { flex: 1; overflow-y: auto; padding: 20px; }
+    #chat-header { height: 45px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; border-bottom: 1px solid #ddd; }
+    #messages { flex: 1; overflow-y: auto; padding: 15px; }
     
-    /* 气泡 */
-    .row { display: flex; margin-bottom: 15px; }
+    /* 气泡样式 */
+    .row { display: flex; margin-bottom: 12px; align-items: flex-start; }
     .left { justify-content: flex-start; }
     .right { justify-content: flex-end; }
-    .bubble { max-width: 70%; padding: 10px 15px; border-radius: 8px; font-size: 15px; line-height: 1.4; }
+    .bubble { max-width: 75%; padding: 10px; border-radius: 8px; font-size: 15px; line-height: 1.4; }
     .left .bubble { background: #fff; border: 1px solid #ddd; }
     .right .bubble { background: #95ec69; }
 
     /* 输入栏 */
-    #input-bar { height: 80px; background: #fff; border-top: 1px solid #ddd; display: flex; padding: 15px; }
-    #text-input { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 10px; outline: none; font-size: 14px; resize: none; }
-    #send-btn { margin-left: 10px; background: #07c160; color: #fff; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer; }
+    #input-bar { height: 60px; background: #fff; border-top: 1px solid #ddd; display: flex; align-items: center; padding: 0 10px; }
+    #text-input { flex: 1; height: 36px; border: 1px solid #ddd; border-radius: 4px; padding: 0 10px; outline: none; }
+    #send-btn { margin-left: 8px; background: #07c160; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
     #send-btn:disabled { background: #ccc; }
 </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div id="sidebar-head">会话列表</div>
+    <div id="sidebar-head">访客列表 (在线)</div>
     <div id="user-list"></div>
 </div>
 
 <div id="chat-area">
-    <div id="chat-header">请选择一个访客开始交流</div>
+    <div id="chat-header">等待访客发消息...</div>
     <div id="messages"></div>
     <div id="input-bar">
-        <textarea id="text-input" placeholder="输入回复内容..." disabled></textarea>
+        <input type="text" id="text-input" placeholder="请先选择访客..." disabled>
         <button id="send-btn" onclick="handleSend()" disabled>发送</button>
     </div>
 </div>
 
 <script>
     let activeUserId = "";
-    let messageStore = {}; // 结构: { '访客ID': [消息列表] }
+    let messageStore = {}; // 存储所有人的对话 { '访客ID': [{from, text}, ...] }
     
+    // 连接后端 (确保地址准确)
     const socket = new WebSocket('wss://page-c4hm.onrender.com');
 
     socket.onopen = () => {
+        console.log("客服端连接成功");
+        // 初始化身份
         socket.send(JSON.stringify({ type: "init", userId: "admin" }));
     };
 
     socket.onmessage = (e) => {
         const data = JSON.parse(e.data);
-        const { from, to, text, type } = data;
+        console.log("收到原始数据:", data);
 
-        // 确定这条消息属于哪个用户会话
-        const talker = (from === "admin") ? to : from;
+        // 处理逻辑消息 (msg 或 img)
+        if (data.type === "msg" || data.type === "img") {
+            // 谁跟我聊，谁就是 talker
+            const talker = (data.from === "admin") ? data.to : data.from;
 
-        // 初始化会话存储
-        if (!messageStore[talker]) {
-            messageStore[talker] = [];
+            // 1. 如果是新面孔，立刻在左侧列表创建位置
+            if (!messageStore[talker]) {
+                messageStore[talker] = [];
+                console.log("发现新访客:", talker);
+            }
+
+            // 2. 存入消息
+            messageStore[talker].push(data);
+
+            // 3. 强制刷新列表界面 (为了让新访客 ID 显示出来)
             updateUserListUI();
-        }
 
-        // 存入消息
-        messageStore[talker].push(data);
-
-        // 如果是当前选中的用户，渲染聊天墙
-        if (talker === activeUserId) {
-            renderMessages();
+            // 4. 如果当前正开着这个人的窗口，实时刷出气泡
+            if (talker === activeUserId) {
+                renderMessages();
+            }
         }
     };
 
+    // 刷新左侧列表
     function updateUserListUI() {
         const listDOM = document.getElementById("user-list");
         listDOM.innerHTML = "";
-        Object.keys(messageStore).forEach(uid => {
+        
+        // 获取所有有记录的用户
+        const uids = Object.keys(messageStore);
+        if (uids.length === 0) {
+            listDOM.innerHTML = '<div style="padding:15px;color:#666;font-size:12px;">暂无消息</div>';
+            return;
+        }
+
+        uids.forEach(uid => {
             const item = document.createElement("div");
             item.className = "user-card" + (uid === activeUserId ? " active" : "");
             item.innerText = uid;
@@ -94,42 +112,56 @@
         });
     }
 
+    // 切换用户
     function switchUser(uid) {
         activeUserId = uid;
-        document.getElementById("chat-header").innerText = "正在对话: " + uid;
+        document.getElementById("chat-header").innerText = "与 " + uid + " 对话中";
         document.getElementById("text-input").disabled = false;
         document.getElementById("send-btn").disabled = false;
+        document.getElementById("text-input").placeholder = "请输入回复...";
+        
         updateUserListUI();
         renderMessages();
     }
 
+    // 渲染右侧气泡
     function renderMessages() {
         const box = document.getElementById("messages");
         box.innerHTML = "";
         const msgs = messageStore[activeUserId] || [];
+        
         msgs.forEach(m => {
             const isMe = m.from === "admin";
             const row = document.createElement("div");
             row.className = "row " + (isMe ? "right" : "left");
-            row.innerHTML = `<div class="bubble">${m.text}</div>`;
+            row.innerHTML = `<div class="bubble">${m.text || "[图片]"}</div>`;
             box.appendChild(row);
         });
         box.scrollTop = box.scrollHeight;
     }
 
+    // 发送回复
     function handleSend() {
         const input = document.getElementById("text-input");
-        if (!input.value.trim() || !activeUserId) return;
+        const val = input.value.trim();
+        if (!val || !activeUserId) return;
 
         const payload = {
             from: "admin",
-            to: activeUserId,
+            to: activeUserId, // 发送给当前选中的人
             type: "msg",
-            text: input.value
+            text: val
         };
+        
+        console.log("正在发送给访客:", activeUserId, payload);
         socket.send(JSON.stringify(payload));
         input.value = "";
     }
+
+    // 绑定回车键
+    document.getElementById("text-input").onkeypress = (e) => {
+        if (e.key === 'Enter') handleSend();
+    };
 </script>
 </body>
 </html>
