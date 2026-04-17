@@ -9,26 +9,30 @@
 <style>
 * { box-sizing: border-box; }
 
-body {
+/* ✅ iOS稳定核心 */
+html, body {
+  height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont;
   background: #ededed;
-  height: 100vh;
-  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont;
 }
 
-/* 顶部 */
+/* ⭐整体改为flex布局（关键修复） */
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ================= 顶部 ================= */
 #top {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
 
   height: calc(44px + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
 
   background: #ededed;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 0.5px solid rgba(0,0,0,0.05);
+
   z-index: 999;
 }
 
@@ -67,21 +71,12 @@ body {
   font-weight: 500;
 }
 
-/* 聊天区 */
+/* ================= 聊天区（iOS稳定核心） ================= */
 #chat-container {
-  position: absolute;
-  top: calc(44px + env(safe-area-inset-top));
-  bottom: 60px;
-  left: 0;
-  right: 0;
-}
-
-#chat {
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 12px;
-  display: flex;
-  flex-direction: column;
 }
 
 /* 消息 */
@@ -112,47 +107,53 @@ body {
   border-radius:10px;
 }
 
-/* 输入 */
+/* ================= 输入栏（iOS修复核心） ================= */
 #bar {
-  position: fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:60px;
-  background:#f7f7f7;
-  display:flex;
-  align-items:center;
-  padding:8px;
-  border-top:1px solid #ddd;
+  flex-shrink: 0;
+
+  height: 60px;
+  background: #f7f7f7;
+
+  display: flex;
+  align-items: center;
+  padding: 8px;
+
+  border-top: 1px solid #ddd;
+
+  position: relative;
+  z-index: 1000;
 }
 
 #text {
-  flex:1;
-  height:36px;
-  border:none;
-  border-radius:6px;
-  padding:0 10px;
-  font-size:16px;
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 16px; /* ⭐防iOS自动放大 */
 
-  outline:none;
-  box-shadow:none;
+  outline: none;
+  box-shadow: none;
+
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 #text:focus {
-  outline:none;
-  box-shadow:none;
+  outline: none;
+  box-shadow: none;
 }
 
 button {
-  margin-left:6px;
-  background:#07c160;
-  color:#fff;
-  border:none;
-  padding:8px 12px;
-  border-radius:6px;
+  margin-left: 6px;
+  background: #07c160;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
 }
 
-/* 图片预览 */
+/* ================= 图片预览 ================= */
 #imgPreview {
   position: fixed;
   top: 0;
@@ -217,14 +218,14 @@ const text = document.getElementById("text");
 
 const ws = new WebSocket("ws://localhost:3000");
 
-/* 滚动（修复版） */
+/* ===== 滚动（iOS稳定） ===== */
 function scrollBottom(){
   requestAnimationFrame(()=>{
     chat.scrollTop = chat.scrollHeight;
   });
 }
 
-/* 图片预览 */
+/* ===== 图片预览 ===== */
 function openPreview(src){
   document.getElementById("previewImg").src = src;
   document.getElementById("imgPreview").style.display = "flex";
@@ -234,7 +235,7 @@ function closePreview(){
   document.getElementById("imgPreview").style.display = "none";
 }
 
-/* 保存图片 */
+/* ===== 保存图片 ===== */
 function saveImage(src){
   const a = document.createElement("a");
   a.href = src;
@@ -244,7 +245,7 @@ function saveImage(src){
   document.body.removeChild(a);
 }
 
-/* 消息 */
+/* ===== 消息 ===== */
 function addMsg(content,type,isImg=false){
   const row=document.createElement("div");
   row.className="row "+type;
@@ -266,27 +267,22 @@ function addMsg(content,type,isImg=false){
       openPreview(content);
     };
 
-    /* ⭐修复：图片加载后自动滚到底 */
+    /* ⭐iOS关键：图片加载后滚到底 */
     img.onload = function(){
       scrollBottom();
     };
 
     /* ⭐长按保存 */
-    let pressTimer;
+    let timer;
 
-    img.addEventListener("touchstart", function(){
-      pressTimer = setTimeout(()=>{
+    img.addEventListener("touchstart", ()=>{
+      timer = setTimeout(()=>{
         saveImage(content);
       }, 600);
     });
 
-    img.addEventListener("touchend", function(){
-      clearTimeout(pressTimer);
-    });
-
-    img.addEventListener("touchmove", function(){
-      clearTimeout(pressTimer);
-    });
+    img.addEventListener("touchend", ()=> clearTimeout(timer));
+    img.addEventListener("touchmove", ()=> clearTimeout(timer));
 
     box.appendChild(img);
 
@@ -308,7 +304,7 @@ function addMsg(content,type,isImg=false){
   scrollBottom();
 }
 
-/* WS */
+/* ===== WS ===== */
 ws.onopen=()=>{
   ws.send(JSON.stringify({type:"join",room:"1"}));
 };
@@ -319,7 +315,7 @@ ws.onmessage=(e)=>{
   if(d.type==="img") addMsg(d.img,"left",true);
 };
 
-/* 发送 */
+/* ===== 发送 ===== */
 function send(){
   const v=text.value.trim();
   if(!v) return;
@@ -332,7 +328,7 @@ function send(){
   text.blur();
 }
 
-/* 图片选择 */
+/* ===== 图片 ===== */
 function pickImg(){
   document.getElementById("file").click();
 }
