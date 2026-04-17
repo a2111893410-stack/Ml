@@ -4,32 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>微信级IM</title>
+<title>WeChat 5.0 System</title>
 
 <style>
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
-  padding: 0;
   height: 100%;
-  overflow: hidden; /* ⭐关键 */
+  overflow: hidden;
   background: #ededed;
   font-family: -apple-system, BlinkMacSystemFont;
 }
 
-/* ================= 顶部 ================= */
+/* ===== 顶部 ===== */
 #top {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-
   height: 44px;
   padding-top: env(safe-area-inset-top);
-
   background: #ededed;
-  border-bottom: 0.5px solid rgba(0,0,0,0.05);
+  border-bottom: 0.5px solid rgba(0,0,0,0.06);
   z-index: 999;
 }
 
@@ -42,87 +39,89 @@ html, body {
 }
 
 #back, #more {
+  position: absolute;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 20px;
   color: rgba(0,0,0,0.85);
 }
 
-#back {
-  position: absolute;
-  left: 10px;
-}
-
-#more {
-  position: absolute;
-  right: 12px;
-}
+#back { left: 10px; }
+#more { right: 12px; }
 
 #title {
   font-size: 17px;
   font-weight: 500;
 }
 
-/* ================= 聊天区（核心优化） ================= */
+/* ===== 菜单 ===== */
+#moreMenu {
+  position: fixed;
+  top: 60px;
+  right: 10px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+  display: none;
+  z-index: 9999;
+}
+
+.more-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ===== 聊天 ===== */
 #chat {
   position: fixed;
-  top: calc(44px + env(safe-area-inset-top));
   left: 0;
   right: 0;
-
-  /* ⭐关键：动态高度（JS控制） */
+  top: calc(44px + env(safe-area-inset-top));
   bottom: 60px;
-
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-
   padding: 12px;
 }
 
 /* 消息 */
-.row { display:flex; margin:8px 0; }
-.left { justify-content:flex-start; }
-.right { justify-content:flex-end; }
-
-.avatar {
-  width:34px;
-  height:34px;
-  background:#ccc;
-  border-radius:4px;
-  margin:0 6px;
+.row {
+  display: flex;
+  margin: 8px 0;
 }
+
+.left { justify-content: flex-start; }
+.right { justify-content: flex-end; }
 
 .bubble {
-  max-width:70%;
-  padding:10px;
-  border-radius:10px;
-  font-size:15px;
+  max-width: 70%;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 15px;
 }
 
-.left .bubble { background:#fff; }
-.right .bubble { background:#95ec69; }
+.left .bubble { background: #fff; }
+.right .bubble { background: #95ec69; }
 
+/* 图片 */
 .msg-img img {
-  max-width:180px;
-  border-radius:10px;
+  max-width: 180px;
+  border-radius: 10px;
 }
 
-/* ================= 输入栏（WebView核心） ================= */
+/* ===== 输入栏 ===== */
 #bar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-
   height: 60px;
   background: #f7f7f7;
-
   display: flex;
   align-items: center;
   padding: 8px;
-
-  border-top: 1px solid #ddd;
-  z-index: 1000;
-
-  /* ⭐关键：防止iOS抖动 */
-  transform: translateZ(0);
+  border-top: 1px solid rgba(0,0,0,0.08);
 }
 
 #text {
@@ -132,9 +131,7 @@ html, body {
   border-radius: 6px;
   padding: 0 10px;
   font-size: 16px;
-
   outline: none;
-  -webkit-appearance: none;
 }
 
 button {
@@ -146,15 +143,15 @@ button {
   border-radius: 6px;
 }
 
-/* ================= 图片预览 ================= */
+/* ===== 图片预览 ===== */
 #imgPreview {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.95);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 99999;
 }
 
 #imgPreview img {
@@ -169,10 +166,16 @@ button {
 <!-- 顶部 -->
 <div id="top">
   <div id="top-inner">
-    <div id="back">‹</div>
+    <div id="back" onclick="history.back()">‹</div>
     <div id="title">管理员</div>
-    <div id="more">···</div>
+    <div id="more" onclick="toggleMore()">···</div>
   </div>
+</div>
+
+<!-- 菜单 -->
+<div id="moreMenu">
+  <div class="more-item">查看资料</div>
+  <div class="more-item">清空聊天</div>
 </div>
 
 <!-- 聊天 -->
@@ -182,7 +185,7 @@ button {
 <div id="bar">
   <input id="text" placeholder="输入消息..." />
   <input type="file" id="file" accept="image/*" hidden>
-  <button onclick="pickImg()">📷</button>
+  <button onclick="pickImg()">+</button>
   <button onclick="send()">发送</button>
 </div>
 
@@ -193,33 +196,23 @@ button {
 
 <script>
 const chat = document.getElementById("chat");
-const text = document.getElementById("text");
-const bar = document.getElementById("bar");
 
-const ws = new WebSocket("ws://localhost:3000");
-
-/* ================= iOS WebView核心修复 ================= */
-function setLayout(){
-  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-  const topH = document.getElementById("top").offsetHeight;
-  const barH = bar.offsetHeight;
-
-  chat.style.height = (vh - topH - barH) + "px";
+/* ===== 菜单 ===== */
+function toggleMore(){
+  const menu = document.getElementById("moreMenu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
 
-window.addEventListener("resize", setLayout);
-window.visualViewport && window.visualViewport.addEventListener("resize", setLayout);
-setLayout();
+document.addEventListener("click",(e)=>{
+  const menu = document.getElementById("moreMenu");
+  const more = document.getElementById("more");
 
-/* ================= 滚动 ================= */
-function scrollBottom(){
-  requestAnimationFrame(()=>{
-    chat.scrollTop = chat.scrollHeight;
-  });
-}
+  if(!menu.contains(e.target) && e.target !== more){
+    menu.style.display = "none";
+  }
+});
 
-/* ================= 图片预览 ================= */
+/* ===== 图片预览 ===== */
 function openPreview(src){
   document.getElementById("previewImg").src = src;
   document.getElementById("imgPreview").style.display = "flex";
@@ -229,71 +222,56 @@ function closePreview(){
   document.getElementById("imgPreview").style.display = "none";
 }
 
-/* ================= 消息 ================= */
-function addMsg(content,type,isImg=false){
+/* ===== 消息 ===== */
+function addMsg(text,type){
   const row=document.createElement("div");
   row.className="row "+type;
 
-  const avatar=document.createElement("div");
-  avatar.className="avatar";
+  const bubble=document.createElement("div");
+  bubble.className="bubble";
+  bubble.innerText=text;
 
-  let box;
-
-  if(isImg){
-    box=document.createElement("div");
-    box.className="msg-img";
-
-    const img=document.createElement("img");
-    img.src = content;
-
-    img.onclick = () => openPreview(content);
-    img.onload = scrollBottom;
-
-    box.appendChild(img);
-
-  } else {
-    box=document.createElement("div");
-    box.className="bubble";
-    box.innerText=content;
-  }
-
-  if(type==="left"){
-    row.appendChild(avatar);
-    row.appendChild(box);
-  } else {
-    row.appendChild(box);
-    row.appendChild(avatar);
-  }
-
+  row.appendChild(bubble);
   chat.appendChild(row);
-  scrollBottom();
+
+  chat.scrollTop = chat.scrollHeight;
 }
 
-/* ================= WebSocket ================= */
-ws.onopen=()=>{
-  ws.send(JSON.stringify({type:"join",room:"1"}));
-};
+/* ===== 图片消息 ===== */
+function addImage(src,type){
+  const row=document.createElement("div");
+  row.className="row "+type;
 
-ws.onmessage=(e)=>{
-  const d=JSON.parse(e.data);
-  if(d.type==="msg") addMsg(d.text,"left");
-  if(d.type==="img") addMsg(d.img,"left",true);
-};
+  const box=document.createElement("div");
+  box.className="msg-img";
 
-/* ================= 发送 ================= */
+  const img=document.createElement("img");
+  img.src=src;
+
+  /* 点击预览 */
+  img.onclick = ()=>{
+    openPreview(src);
+  };
+
+  box.appendChild(img);
+  row.appendChild(box);
+  chat.appendChild(row);
+
+  img.onload=()=>{
+    chat.scrollTop = chat.scrollHeight;
+  };
+}
+
+/* ===== 发送 ===== */
 function send(){
-  const v=text.value.trim();
+  const v=document.getElementById("text").value.trim();
   if(!v) return;
 
   addMsg(v,"right");
-
-  ws.send(JSON.stringify({type:"msg",text:v}));
-
-  text.value="";
-  text.blur();
+  document.getElementById("text").value="";
 }
 
-/* ================= 图片 ================= */
+/* ===== 图片 ===== */
 function pickImg(){
   document.getElementById("file").click();
 }
@@ -304,12 +282,7 @@ document.getElementById("file").onchange=function(){
 
   const reader=new FileReader();
   reader.onload=(e)=>{
-    addMsg(e.target.result,"right",true);
-
-    ws.send(JSON.stringify({
-      type:"img",
-      img:e.target.result
-    }));
+    addImage(e.target.result,"right");
   };
   reader.readAsDataURL(file);
 };
