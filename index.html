@@ -18,7 +18,7 @@ html, body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* ===== 顶部（🔥统一高级版） ===== */
+/* ===== 顶部 ===== */
 #top {
   position: fixed;
   top: 0;
@@ -29,6 +29,7 @@ html, body {
   background: #ededed;
   border-bottom: 0.5px solid rgba(0,0,0,0.06);
   z-index: 999;
+  backdrop-filter: blur(10px);
 }
 
 #top-inner {
@@ -39,7 +40,7 @@ html, body {
   position: relative;
 }
 
-/* ⭐统一按钮区域 */
+/* ===== 顶部按钮（SVG高级版） ===== */
 .top-btn {
   position: absolute;
   top: 0;
@@ -48,10 +49,23 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0,0,0,0.85);
-  font-size: 22px;
+
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 12px;
+
+  transition: all 0.15s ease;
 }
 
+.top-btn svg {
+  display: block;
+}
+
+.top-btn:active {
+  background: rgba(0,0,0,0.06);
+  transform: scale(0.92);
+}
+
+/* 左右位置 */
 #back { left: 2px; }
 #more { right: 2px; }
 
@@ -128,7 +142,7 @@ html, body {
   border-left: 6px solid #95ec69;
 }
 
-/* ===== 输入栏（🔥最终稳定版） ===== */
+/* ===== 输入栏 ===== */
 #bar {
   position: fixed;
   left: 0;
@@ -196,19 +210,32 @@ button {
 <body>
 
 <!-- 顶部 -->
-<div id="top"›
-<div id="top-inner">
+<div id="top">
+  <div id="top-inner">
 
-<！-— 微信级返回键 -->
-‹svg width="20" height="20" viewBox="0 0
-<path d="M15 181-6-6 6-6"
-stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</ svg>
-</div>
+    <!-- 返回键 SVG -->
+    <div id="back" class="top-btn" onclick="goBack()">
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <path d="M15.5 19l-7-7 7-7"
+          fill="none"
+          stroke="black"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+      </svg>
+    </div>
 
     <div id="title">管理员</div>
 
-    <div id="more" class="top-btn">⋯</div>
+    <!-- 菜单键 SVG -->
+    <div id="more" class="top-btn">
+      <svg viewBox="0 0 24 24" width="22" height="22">
+        <circle cx="5" cy="12" r="1.8" fill="black"/>
+        <circle cx="12" cy="12" r="1.8" fill="black"/>
+        <circle cx="19" cy="12" r="1.8" fill="black"/>
+      </svg>
+    </div>
+
   </div>
 </div>
 
@@ -230,6 +257,15 @@ stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
 <script>
 const chat = document.getElementById("chat");
+
+/* 返回功能 */
+function goBack(){
+  if (history.length > 1) {
+    history.back();
+  } else {
+    window.location.href = "/";
+  }
+}
 
 function scrollBottom(){
   setTimeout(()=>{
