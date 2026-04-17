@@ -1,30 +1,73 @@
-const express = require("express");
-const http = require("http");
-const WebSocket = require("ws");
-const cors = require("cors");
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8"><title>客服管理</title>
+    <style>
+        body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; }
+        #list { width: 150px; background: #333; color: #fff; cursor: pointer; }
+        .u { padding: 15px; border-bottom: 1px solid #444; }
+        .u.active { background: #07c160; }
+        #main { flex: 1; display: flex; flex-direction: column; background: #eee; }
+        #msgs { flex: 1; overflow-y: auto; padding: 10px; }
+        #bar { display: flex; padding: 10px; background: #fff; }
+        input { flex: 1; padding: 10px; }
+    </style>
+</head>
+<body>
+<div id="list"></div>
+<div id="main">
+    <div id="msgs"></div>
+    <div id="bar">
+        <input id="ipt" placeholder="点击左侧用户开始聊天">
+        <button onclick="send()">发送</button>
+    </div>
+</div>
+<script>
+    let activeId = "";
+    let db = {}; // 存储消息 {用户ID: [消息]}
+    const socket = new WebSocket('wss://page-c4hm.onrender.com');
 
-const app = express();
-app.use(cors());
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-wss.on("connection", (ws) => {
-    ws.on("message", (raw) => {
-        try {
-            const data = JSON.parse(raw);
-            console.log("转发消息:", data);
+    socket.onmessage = (e) => {
+        const res = JSON.parse(e.data);
+        // 只要是发给admin的消息，或者admin发出去的消息
+        if (res.to === "admin" || res.from === "admin") {
+            const talker = res.from === "admin" ? res.to : res.from;
+            if (!db[talker]) db[talker] = [];
+            db[talker].push(res);
             
-            // 收到任何消息，直接广播给所有连接的人
-            const msgString = JSON.stringify(data);
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(msgString);
-                }
-            });
-        } catch (e) { console.error("解析失败"); }
-    });
-});
+            renderList();
+            if (talker === activeId) renderChat();
+        }
+    };
 
-app.get("/", (req, res) => res.send({ status: "running", online: wss.clients.size }));
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server Active"));
+    function renderList() {
+        const l = document.getElementById("list");
+        l.innerHTML = "";
+        Object.keys(db).forEach(id => {
+            const d = document.createElement("div");
+            d.className = "u" + (id === activeId ? " active" : "");
+            d.innerText = id;
+            d.onclick = () => { activeId = id; renderList(); renderChat(); };
+            l.appendChild(d);
+        });
+    }
+
+    function renderChat() {
+        const m = document.getElementById("msgs");
+        m.innerHTML = (db[activeId] || []).map(msg => 
+            `<div style="text-align:${msg.from==='admin'?'right':'left'}">
+                <p style="background:${msg.from==='admin'?'#95ec69':'#fff'};display:inline-block;padding:8px;border-radius:5px;">${msg.text}</p>
+            </div>`
+        ).join("");
+        m.scrollTop = m.scrollHeight;
+    }
+
+    function send() {
+        const val = document.getElementById("ipt").value;
+        if (!val || !activeId) return;
+        socket.send(JSON.stringify({ from: "admin", to: activeId, text: val, type: "msg" }));
+        document.getElementById("ipt").value = "";
+    }
+</script>
+</body>
+</html>
