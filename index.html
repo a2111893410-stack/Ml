@@ -3,64 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>客服</title>
+    <title>联系客服</title>
     <style>
         body { margin: 0; background: #ededed; display: flex; flex-direction: column; height: 100vh; }
         #chat { flex: 1; overflow-y: auto; padding: 15px; }
         .row { display: flex; margin-bottom: 12px; }
         .right { justify-content: flex-end; }
-        .bubble { max-width: 75%; padding: 10px; border-radius: 8px; font-size: 15px; background: #fff; word-break: break-all; }
+        .bubble { max-width: 75%; padding: 10px; border-radius: 8px; font-size: 15px; background: #fff; line-height: 1.4; word-break: break-all; }
         .right .bubble { background: #95ec69; }
         #bar { padding: 10px; display: flex; background: #f7f7f7; border-top: 1px solid #ddd; }
-        input { flex: 1; border: none; padding: 10px; border-radius: 5px; font-size: 16px; outline: none; }
+        input { flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px; outline: none; font-size: 16px; }
         button { margin-left: 10px; background: #07c160; color: #fff; border: none; padding: 0 15px; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div id="chat"></div>
     <div id="bar">
-        <input id="ipt" placeholder="输入消息..." autocomplete="off">
+        <input id="ipt" placeholder="请输入消息..." autocomplete="off">
         <button onclick="send()">发送</button>
     </div>
-    <script>
-        let myId = localStorage.getItem('chat_uid') || 'U'+Math.random().toString(36).substr(2,5).toUpperCase();
-        localStorage.setItem('chat_uid', myId);
-        let socket, shownIds = new Set(); // 用于排重
 
-        function connect() {
-            socket = new WebSocket('wss://page-c4hm.onrender.com');
-            socket.onopen = () => socket.send(JSON.stringify({type:"init", userId:myId}));
-            socket.onmessage = (e) => {
-                const res = JSON.parse(e.data);
-                if(res.type === "ping") return;
-                if(res.type === "history") {
-                    document.getElementById('chat').innerHTML = "";
-                    shownIds.clear();
-                    res.list.forEach(m => render(m));
-                } else if(res.from === myId || res.to === myId) {
-                    render(res);
-                }
-            };
-            socket.onclose = () => setTimeout(connect, 2000);
-        }
+<script>
+    const chatBox = document.getElementById('chat');
+    const shownMsgIds = new Set();
+    
+    // 生成固定ID
+    let myId = localStorage.getItem('chat_uid') || 'Visitor-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+    localStorage.setItem('chat_uid', myId);
 
-        function render(m) {
-            if(shownIds.has(m.id)) return; // 核心：如果ID已存在，不画第二次
-            shownIds.add(m.id);
-            const row = document.createElement('div');
-            row.className = `row ${m.from === myId ? 'right' : 'left'}`;
-            row.innerHTML = `<div class="bubble">${m.text}</div>`;
-            document.getElementById('chat').appendChild(row);
-            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-        }
+    let socket;
+    function connect() {
+        socket = new WebSocket('wss://page-c4hm.onrender.com'); // 确保地址正确
 
-        function send() {
-            const i = document.getElementById('ipt');
-            if(!i.value.trim()) return;
-            socket.send(JSON.stringify({from:myId, to:"admin", text:i.value, type:"msg"}));
-            i.value = "";
-        }
-        connect();
-    </script>
+        socket.onopen = () => {
+            socket.send(JSON.stringify({ type: "init", userId: myId }));
+        };
+
+        socket.onmessage = (e) => {
+            const res = JSON.parse(e.data);
+            if (res.type === "history") {
+                chatBox.innerHTML = "";
+                shownMsgIds.clear();
+                res.list.forEach(m => render(m));
+            } else if (res.type === "msg") {
+                render(res);
+            }
+        };
+
+        socket.onclose = () => setTimeout(connect, 2000);
+    }
+
+    function render(m) {
+        if (shownMsgIds.has(m.msgId)) return; // 去重
+        shownMsgIds.add(m.msgId);
+        
+        const isMe = m.from === myId;
+        const row = document.createElement('div');
+        row.className = `row ${isMe ? 'right' : 'left'}`;
+        row.innerHTML = `<div class="bubble">${m.text}</div>`;
+        chatBox.appendChild(row);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function send() {
+        const i = document.getElementById('ipt');
+        if (!i.value.trim()) return;
+        socket.send(JSON.stringify({
+            from: myId,
+            to: "admin",
+            text: i.value,
+            type: "msg"
+        }));
+        i.value = "";
+    }
+    connect();
+</script>
 </body>
 </html>
