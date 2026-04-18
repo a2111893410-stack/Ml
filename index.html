@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>联系客服</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>在线客服</title>
     <style>
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; background: #ededed; }
+        body { margin: 0; background: #ededed; display: flex; flex-direction: column; height: 100vh; }
         #chat { flex: 1; overflow-y: auto; padding: 15px; }
         .row { display: flex; margin-bottom: 12px; }
         .right { justify-content: flex-end; }
         .bubble { max-width: 75%; padding: 10px; border-radius: 8px; background: #fff; font-size: 15px; }
         .right .bubble { background: #95ec69; }
         #bar { padding: 10px; display: flex; background: #f7f7f7; border-top: 1px solid #ddd; }
-        input { flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px; outline: none; }
+        input { flex: 1; border: none; padding: 10px; border-radius: 5px; outline: none; }
     </style>
 </head>
 <body>
@@ -21,7 +22,7 @@
 <script>
     const chatBox = document.getElementById('chat');
     const shownIds = new Set();
-    const myId = localStorage.getItem('chat_uid') || 'V-'+Math.random().toString(16).slice(2,7).toUpperCase();
+    const myId = localStorage.getItem('chat_uid') || 'V'+Math.random().toString(16).slice(2,7).toUpperCase();
     localStorage.setItem('chat_uid', myId);
 
     let socket;
@@ -33,15 +34,18 @@
             if (res.type === "history") {
                 chatBox.innerHTML = ""; shownIds.clear();
                 res.list.forEach(m => render(m));
-            } else {
-                render(res);
+            } else if (res.type === "msg") {
+                // 【关键】只要这条消息是发给我的，或者是我的回显，就渲染
+                if (res.to === myId || res.from === myId) {
+                    render(res);
+                }
             }
         };
         socket.onclose = () => setTimeout(connect, 2000);
     }
 
     function render(m) {
-        if (!m.msgId || shownIds.has(m.msgId)) return;
+        if (shownIds.has(m.msgId)) return;
         shownIds.add(m.msgId);
         const row = document.createElement('div');
         row.className = `row ${m.from === myId ? 'right' : 'left'}`;
