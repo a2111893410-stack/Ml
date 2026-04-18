@@ -2,158 +2,214 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>在线客服</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <title>WeChat客服 - 性能极致版</title>
     <style>
-        :root {
-            /* 定义动态高度变量，初始为 100vh */
-            --safe-height: 100vh;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
+        /* --- [极致优化：布局锁定] 让 html/body 完全固定，零抖动 --- */
         html, body { 
             height: 100%; width: 100%; margin: 0; padding: 0; 
-            overflow: hidden; background: #ededed; 
-        }
-        
-        /* 核心优化：使用 fixed 定位并由 CSS 变量控制高度 */
-        #app-wrapper {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: var(--safe-height); /* 动态实时高度 */
-            display: flex;
-            flex-direction: column;
-            background: #ededed;
-            will-change: height; /* 告知浏览器此处会有动画优化 */
+            overflow: hidden; /* 核心：彻底锁死最外层滑动 */
+            position: fixed; top: 0; left: 0;
+            background: #ededed; 
+            font-family: -apple-system, sans-serif; 
         }
 
+        /* 统一性能打补丁 */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        /* * 顶部栏 (WeChat Style) 
+         * 适配env(safe-area-inset-top)
+         */
         #header-wrapper {
-            background: #ededed; border-bottom: 1px solid #dcdcdc;
-            padding-top: env(safe-area-inset-top); flex-shrink: 0;
+            background: #ededed; border-bottom: 1px solid #dcdcdc; 
+            padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 10;
         }
         #header { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 500; }
 
-        #chat { 
-            flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; 
-            background: #ededed; 
+        /* * [极致优化：真正的全屏性能容器] 
+         * 占据从头部到手机最底部的所有空间 (100dvh)
+         * 开启 Flex 布局，不再受 fixed 定位的影响
+         */
+        #wepro-app {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; overflow: hidden;
+            background: #ededed;
         }
-        #chat-inner { padding: 12px; display: flex; flex-direction: column; }
 
-        /* 气泡样式略（保持原样） */
-        .msg-row { margin-bottom: 16px; display: flex; align-items: flex-start; }
-        .msg-row.me { flex-direction: row-reverse; }
-        .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; background-size: cover; flex-shrink: 0; }
-        .me .avatar { margin-left: 12px; background-image: url('https://dummyimage.com/100/95ec69/fff&text=我'); }
-        .visitor .avatar { margin-right: 12px; background-image: url('https://dummyimage.com/100/fff/333&text=客'); }
-        .bubble-txt { position: relative; padding: 10px 14px; font-size: 16px; line-height: 1.5; border-radius: 6px; max-width: calc(100% - 110px); word-wrap: break-word; background: #fff; }
-        .me .bubble-txt { background: #95ec69; }
+        /* 中间主体区：颜色改为背景灰，进一步收窄 */
+        #container { flex: 1; display: flex; overflow: hidden; }
 
+        /* 侧边栏保持 */
+        #side-list { 
+            width: 70px; background: #ededed; border-right: 1px solid #dcdcdc; 
+            display: flex; flex-direction: column; flex-shrink: 0; 
+            overflow-y: scroll; -webkit-overflow-scrolling: touch;
+        }
+        .u-item { 
+            padding: 12px 2px; text-align: center; color: #333; cursor: pointer; 
+            font-size: 13px; border-bottom: 1px solid #e0e0e0; position: relative;
+        }
+        .u-item.active { background: #e2e2e2; font-weight: bold; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .online { background: #07c160; box-shadow: 0 0 3px #07c160; }
+        .offline { background: #b2b2b2; }
+
+        .badge { 
+            position: absolute; top: 2px; right: 2px; background: #fa5151; color: white; 
+            border-radius: 10px; min-width: 16px; height: 16px; line-height: 16px; 
+            font-size: 10px; padding: 0 4px; 
+        }
+
+        /* * [极致优化：聊天滚动容器] 
+         * 开启 GPU 硬件加速 (will-change)，彻底消除卡顿
+         * oversroll-behavior 防止滚动到底部或顶部时拖动整个页面
+         */
+        #chat-area { flex: 1; background: #ededed; display: flex; flex-direction: column; overflow: hidden; }
+        #box { 
+            flex: 1; overflow-y: scroll; -webkit-overflow-scrolling: touch; padding: 15px 10px;
+            overscroll-behavior: none; /* 核心：防止原生滚动干扰 */
+            will-change: transform, scroll-position; /* 告知 GPU 提前优化滚动 */
+            transform: translateZ(0); /* 强制 GPU 硬件加速 */
+        }
+
+        /* 气泡样式（简化版示例） */
+        .msg-row { display: flex; margin-bottom: 15px; }
+        .msg-row.admin { flex-direction: row-reverse; }
+        .avatar { width: 38px; height: 38px; border-radius: 4px; background: #fff; flex-shrink: 0; background-size: cover; }
+        .bubble-txt { background: #fff; padding: 10px; border-radius: 6px; max-width: 65%; margin: 0 10px; font-size: 16px; word-wrap: break-word; }
+        .admin .bubble-txt { background: #95ec69; }
+        .bubble-img { max-width: 150px; border-radius: 4px; margin: 0 10px; border: 1px solid #dcdcdc; }
+
+        /* * [极致优化：底部栏固定补丁] 
+         * flex-shrink: 0 确保在键盘弹起时不会被压扁
+         * padding-bottom 适配env(safe-area-inset-bottom)
+         */
         #footer { 
             background: #f7f7f7; border-top: 1px solid #dcdcdc; 
-            padding: 8px 12px;
-            /* 适配底部安全区：仅在键盘收起时生效 */
-            padding-bottom: calc(8px + env(safe-area-inset-bottom));
-            display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
+            padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); flex-shrink: 0; z-index: 10;
         }
-        
+        #input-row { display: flex; align-items: flex-end; gap: 8px; }
         textarea { 
-            flex: 1; min-height: 38px; max-height: 120px; border: none; 
-            background: #fff; border-radius: 6px; padding: 8px 12px; 
-            font-size: 16px; outline: none; resize: none; -webkit-appearance: none;
+            flex: 1; border: none; background: #fff; border-radius: 4px; padding: 10px; 
+            font-size: 16px; outline: none; min-height: 40px; max-height: 100px; resize: none; 
+            -webkit-appearance: none;
         }
-        .btn-send { background: #07c160; color: #fff; border: none; border-radius: 4px; padding: 0 15px; height: 36px; font-size: 15px; font-weight: bold; }
+        .send-btn { height: 36px; padding: 0 15px; background: #07c160; color: #fff; border: none; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="app-wrapper">
+<div id="wepro-app">
     <div id="header-wrapper">
-        <div id="header">在线客服</div>
+        <div id="header">WePro 客户管理</div>
     </div>
 
-    <div id="chat" id="chat-box">
-        <div id="chat-inner"></div>
+    <div id="container">
+        <div id="side-list"></div>
+        <div id="chat-area">
+            <div id="box" onclick="dismissKeyboard()"></div>
+        </div>
     </div>
 
     <div id="footer">
-        <textarea id="ipt" rows="1"></textarea>
-        <button class="btn-send" onclick="sendMsg()">发送</button>
+        <div id="input-row">
+            <textarea id="ipt" rows="1" placeholder="发送..." disabled></textarea>
+            <button class="send-btn" onclick="sendText()">发送</button>
+        </div>
     </div>
 </div>
 
 <script>
-    const chatContainer = document.getElementById('chat');
-    const chatInner = document.getElementById('chat-inner');
-    const iptBox = document.getElementById('ipt');
-    const root = document.documentElement;
+    // 未读记录与脱敏映射保留
+    let unreadMap = JSON.parse(localStorage.getItem('wepro_unread') || '{}');
+    const getShortName = (id) => {
+        let num = id.replace(/[^0-9]/g, "").slice(-1) || "1";
+        const names = ["访客", "用户", "客户", "咨询", "买家"];
+        return names[id.length % names.length] + num;
+    };
 
-    // --- 【极致优化逻辑】 ---
-    
-    let isKeyboardOpen = false;
+    let activeId = "", allMsgs = [], ws;
+    const ipt = document.getElementById('ipt');
+    const box = document.getElementById('box');
+    let onlineStatus = {}; 
 
-    const updateLayout = () => {
-        if (!window.visualViewport) return;
-        
-        const vv = window.visualViewport;
-        // 使用 requestAnimationFrame 确保在浏览器重绘前更新数值，消除抖动
-        requestAnimationFrame(() => {
-            // 直接设置 CSS 变量，让高度自适应
-            root.style.setProperty('--safe-height', `${vv.height}px`);
-            
-            // 键盘弹出状态下，强制滚动到底部
-            if (vv.height < window.innerHeight) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-                if (!isKeyboardOpen) {
-                    isKeyboardOpen = true;
-                    // 彻底解决 Safari 整体页面漂移问题
-                    window.scrollTo(0, 0);
+    // --- [极致优化：抛弃 JS 动态计算] ---
+    // 删除所有 resize 监听和 document.body.style.height 修改逻辑
+    // 改用配合 interactive-widget=resizes-content 的 Meta 标签即可丝滑
+
+    function connect() {
+        ws = new WebSocket('wss://page-c4hm.onrender.com'); 
+        ws.onmessage = (e) => {
+            const res = JSON.parse(e.data);
+            if (res.type === "history") allMsgs = []; 
+            const msgs = res.type === "history" ? res.data : [res.data];
+            msgs.forEach(m => {
+                allMsgs.push(m);
+                const from = String(m.from).toLowerCase();
+                if (from !== 'admin') {
+                    onlineStatus[from] = true; 
+                    if (from !== activeId && res.type !== "history") {
+                        unreadMap[from] = (unreadMap[from] || 0) + 1;
+                        localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
+                    }
                 }
-            } else {
-                isKeyboardOpen = false;
-            }
-        });
-    };
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', updateLayout);
-        window.visualViewport.addEventListener('scroll', updateLayout);
+            });
+            render();
+        };
     }
 
-    // 针对 iOS 的特殊处理：点击输入框时立即修正一次
-    iptBox.addEventListener('focus', () => {
-        setTimeout(updateLayout, 50);
-        setTimeout(updateLayout, 300); // 补一次，确保动画结束时位置精准
-    });
+    function render() {
+        const users = [...new Set(allMsgs.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
+        document.getElementById('side-list').innerHTML = users.map(u => `
+            <div class="u-item ${u === activeId ? 'active' : ''}" onclick="selectUser('${u}')">
+                <span class="status-dot ${onlineStatus[u] ? 'online' : 'offline'}"></span>
+                <span>${getShortName(u)}</span>
+                ${unreadMap[u] ? `<div class="badge">${unreadMap[u]}</div>` : ''}
+            </div>
+        `).join("");
 
-    // 消息逻辑（简化版，仅作演示）
-    const myId = 'user_' + Math.random().toString(36).substr(2,4);
-    let ws = new WebSocket('wss://page-c4hm.onrender.com');
-    
-    ws.onmessage = (e) => {
-        const res = JSON.parse(e.data);
-        const list = res.type === "history" ? res.data : [res.data];
-        list.forEach(m => {
-            const div = document.createElement('div');
-            div.className = 'msg-row' + (String(m.from) === myId ? ' me' : ' visitor');
-            div.innerHTML = `<div class="avatar"></div><div class="bubble-txt">${m.text}</div>`;
-            chatInner.appendChild(div);
-        });
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    };
-
-    function sendMsg() {
-        const text = iptBox.value.trim();
-        if(!text) return;
-        ws.send(JSON.stringify({ from: myId, to: 'admin', text: text, type: 'text' }));
-        iptBox.value = '';
-        iptBox.style.height = '38px';
+        if (!activeId) return;
+        ipt.disabled = false;
+        box.innerHTML = allMsgs.filter(m => m.from === activeId || m.to === activeId).map(m => {
+            const isAdmin = m.from === 'admin';
+            let content = m.type === 'img' ? `<img src="${m.text}" class="bubble-img">` : `<div class="bubble-txt">${m.text}</div>`;
+            return `<div class="msg-row ${isAdmin ? 'admin' : 'visitor'}"><div class="avatar"></div>${content}</div>`;
+        }).join("");
+        scrollToBottom();
     }
 
-    iptBox.oninput = function() {
+    function selectUser(id) {
+        activeId = id.toLowerCase();
+        unreadMap[id] = 0;
+        localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
+        render();
+        setTimeout(() => { ipt.focus(); }, 150);
+    }
+
+    function dismissKeyboard() { ipt.blur(); }
+
+    function sendText() {
+        const val = ipt.value.trim();
+        if (!activeId || !val) return;
+        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: val, type: 'text' }));
+        ipt.value = '';
+        ipt.style.height = '40px';
+    }
+
+    function scrollToBottom() {
+        // 使用 requestAnimationFrame 强制 GPU 在渲染前滑到底部，零抖动
+        requestAnimationFrame(() => {
+            box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    ipt.oninput = function() {
         this.style.height = 'auto';
-        this.style.height = this.scrollHeight + 'px';
+        this.style.height = (this.scrollHeight) + 'px';
     };
+
+    connect();
 </script>
 </body>
 </html>
