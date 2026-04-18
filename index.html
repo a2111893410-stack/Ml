@@ -5,20 +5,19 @@
     <title>联系客服</title>
     <style>
         body { margin:0; display:flex; flex-direction:column; height:100vh; background:#f5f5f5; font-family:sans-serif; }
-        #status { font-size:12px; text-align:center; padding:5px; background:#eee; color:#888; }
+        #status { font-size:12px; text-align:center; padding:8px; background:#eee; color:#666; border-bottom:1px solid #ddd; }
         #chat { flex:1; overflow-y:auto; padding:15px; }
-        .row { display:flex; margin-bottom:12px; animation: fadeIn 0.2s; }
+        .row { display:flex; margin-bottom:12px; }
         .row.me { justify-content:flex-end; }
-        .bubble { padding:10px 14px; background:#fff; border-radius:10px; max-width:75%; font-size:15px; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+        .bubble { padding:10px 14px; background:#fff; border-radius:10px; max-width:75%; font-size:15px; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
         .me .bubble { background:#95ec69; }
-        #bar { display:flex; padding:10px; background:#fff; border-top:1px solid #ddd; padding-bottom:env(safe-area-inset-bottom); }
-        input { flex:1; border:1px solid #ddd; padding:10px; border-radius:6px; outline:none; font-size:16px; }
+        #bar { display:flex; padding:10px; background:#fff; border-top:1px solid #ddd; }
+        input { flex:1; border:1px solid #ddd; padding:10px; border-radius:6px; outline:none; }
         button { margin-left:10px; padding:0 20px; background:#07c160; color:#fff; border:none; border-radius:6px; font-weight:bold; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
     </style>
 </head>
 <body>
-    <div id="status">正在连接...</div>
+    <div id="status">连接中...</div>
     <div id="chat"></div>
     <div id="bar">
         <input id="ipt" placeholder="输入消息..." autocomplete="off">
@@ -26,9 +25,13 @@
     </div>
 
 <script>
-    // 永久固定本地ID
-    const myId = (localStorage.getItem('chat_uid') || 'U' + Math.random().toString(36).substr(2,4).toUpperCase());
-    localStorage.setItem('chat_uid', myId);
+    // 强制持久化唯一ID (全小写)
+    let myId = localStorage.getItem('chat_uid');
+    if(!myId) {
+        myId = 'u' + Math.random().toString(36).substr(2,4);
+        localStorage.setItem('chat_uid', myId);
+    }
+    myId = myId.toLowerCase(); // 强制小写
 
     let ws;
     const chatBox = document.getElementById('chat');
@@ -37,21 +40,34 @@
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com');
 
-        ws.onopen = () => status.innerText = "在线 (ID: " + myId + ")";
-        ws.onclose = () => { status.innerText = "重连中..."; setTimeout(connect, 2000); };
+        ws.onopen = () => status.innerText = "● 在线 (我的ID: " + myId + ")";
+        ws.onclose = () => { status.innerText = "○ 断开重连中..."; setTimeout(connect, 2000); };
         
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
             const list = res.type === "history" ? res.data : [res.data];
+            
             list.forEach(m => {
-                // 【私密性核心】只认领发给自己或自己发出的信
-                if (m.from === myId || m.to === myId) render(m);
+                const from = String(m.from).toLowerCase();
+                const to = String(m.to).toLowerCase();
+                
+                // 收到任何消息都在控制台打印一下（如果你能看F12的话）
+                console.log("收到报文:", m);
+
+                // 私聊判定逻辑
+                if (from === myId || to === myId) {
+                    render(m);
+                } else {
+                    // 调试用：如果收到了别人的消息，状态栏闪烁一下
+                    status.innerText = "● 在线 (忽略了非私聊报文)";
+                    setTimeout(()=> status.innerText = "● 在线 (我的ID: " + myId + ")", 1000);
+                }
             });
         };
     }
 
     function render(m) {
-        const isMe = m.from === myId;
+        const isMe = String(m.from).toLowerCase() === myId;
         const div = document.createElement('div');
         div.className = 'row' + (isMe ? ' me' : '');
         div.innerHTML = `<div class="bubble">${m.text}</div>`;
@@ -65,8 +81,6 @@
         ws.send(JSON.stringify({ from: myId, to: 'admin', text: i.value }));
         i.value = '';
     }
-    
-    document.getElementById('ipt').onkeydown = (e) => { if(e.key==='Enter') send(); };
     connect();
 </script>
 </body>
