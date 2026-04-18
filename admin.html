@@ -1,90 +1,194 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>客服进阶版</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>客服管理系统</title>
     <style>
-        body { display:flex; height:100vh; margin:0; font-family:sans-serif; background:#f0f2f5; }
-        #sidebar { width:220px; background:#2c3e50; color:#fff; overflow-y:auto; }
-        .u-item { padding:15px; border-bottom:1px solid #34495e; cursor:pointer; position:relative; }
-        .u-item.active { background:#1abc9c; }
-        .dot { position:absolute; right:15px; top:18px; width:8px; height:8px; background:#ff4d4f; border-radius:50%; }
-        #main { flex:1; display:flex; flex-direction:column; }
-        #box { flex:1; overflow-y:auto; padding:20px; background:#ebebed; }
-        .row { display:flex; margin-bottom:10px; }
-        .row.admin { justify-content:flex-end; }
-        .bubble { max-width:70%; padding:8px 12px; background:#fff; border-radius:5px; font-size:14px; }
-        .admin .bubble { background:#95ec69; }
-        .bubble img { max-width:200px; display:block; border-radius:4px; }
-        #bar { padding:15px; background:#fff; display:flex; gap:10px; }
+        /* --- 基础布局 --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; height: 100vh; display: flex; background: #ededed; font-family: -apple-system, sans-serif; overflow: hidden; }
+
+        /* --- 左侧用户列表 (固定宽度) --- */
+        #side-panel { width: 100px; background: #2e2e2e; display: flex; flex-direction: column; flex-shrink: 0; }
+        .side-header { height: 44px; background: #262626; color: #999; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        #u-list { flex: 1; overflow-y: auto; }
+        .u-item { 
+            padding: 15px 5px; text-align: center; color: #fff; cursor: pointer; 
+            font-size: 13px; position: relative; border-bottom: 1px solid #3d3d3d; 
+        }
+        .u-item.active { background: #3a3a3a; color: #07c160; font-weight: bold; }
+        
+        /* 未读红点气泡 */
+        .badge { 
+            position: absolute; top: 5px; right: 8px; background: #fa5151; color: white; 
+            border-radius: 10px; min-width: 18px; height: 18px; line-height: 18px; 
+            font-size: 11px; text-align: center; padding: 0 4px; font-weight: normal;
+        }
+
+        /* --- 右侧聊天主区 --- */
+        #main-panel { flex: 1; display: flex; flex-direction: column; background: #ededed; position: relative; }
+        #chat-header { height: 44px; background: #ededed; border-bottom: 1px solid #dcdcdc; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; }
+        
+        #box { flex: 1; overflow-y: auto; padding: 15px 10px; -webkit-overflow-scrolling: touch; }
+
+        /* --- 微信风气泡复刻 --- */
+        .msg-row { display: flex; margin-bottom: 16px; align-items: flex-start; }
+        .msg-row.admin { flex-direction: row-reverse; } /* 客服在右 */
+        
+        .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; flex-shrink: 0; overflow: hidden; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .bubble-txt { 
+            position: relative; max-width: 65%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; 
+            word-wrap: break-word; margin: 0 12px; min-height: 40px;
+        }
+        /* 访客(左) */
+        .visitor .bubble-txt { background: #fff; color: #000; }
+        .visitor .bubble-txt::before { content: ""; position: absolute; left: -10px; top: 14px; border: 5px solid transparent; border-right-color: #fff; }
+        /* 客服(右) */
+        .admin .bubble-txt { background: #95ec69; color: #000; }
+        .admin .bubble-txt::before { content: ""; position: absolute; right: -10px; top: 14px; border: 5px solid transparent; border-left-color: #95ec69; }
+
+        .bubble-img { max-width: 150px; border-radius: 4px; margin: 0 12px; cursor: pointer; display: block; border: 1px solid #dcdcdc; }
+
+        /* --- 底部输入栏 --- */
+        #footer { background: #f7f7f7; border-top: 1px solid #dcdcdc; padding: 8px 10px; padding-bottom: env(safe-area-inset-bottom); }
+        #input-row { display: flex; align-items: flex-end; gap: 8px; }
+        #ipt { flex: 1; border: none; background: #fff; border-radius: 4px; padding: 10px; font-size: 16px; outline: none; min-height: 40px; max-height: 100px; resize: none; }
+        .icon-btn { width: 32px; height: 32px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .send-btn { height: 36px; padding: 0 15px; background: #07c160; color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 4px; }
+
+        /* --- 大图预览 --- */
+        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; align-items: center; justify-content: center; z-index: 100; }
+        #viewer img { max-width: 100%; max-height: 100%; }
     </style>
 </head>
 <body>
-    <div id="sidebar"></div>
-    <div id="main">
-        <div id="box"></div>
-        <div id="bar">
-            <input id="ipt" style="flex:1; padding:10px; border:1px solid #ddd;" placeholder="输入回复...">
-            <button onclick="send()">发送</button>
+
+<div id="side-panel">
+    <div class="side-header">访客列表</div>
+    <div id="u-list"></div>
+</div>
+
+<div id="main-panel">
+    <div id="chat-header"><span id="cur-user">请选择访客</span></div>
+    <div id="box"></div>
+    
+    <div id="footer">
+        <div id="input-row">
+            <label class="icon-btn">
+                <svg viewBox="0 0 24 24" width="26" height="26"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <input type="file" id="file-ipt" accept="image/*" style="display:none" onchange="adminSendImg(this)">
+            </label>
+            <textarea id="ipt" rows="1" disabled></textarea>
+            <button class="send-btn" onclick="sendText()">发送</button>
         </div>
     </div>
+</div>
+
+<div id="viewer" onclick="this.style.display='none'"><img id="viewer-img"></div>
 
 <script>
-    let activeId = "", allMsgs = [], unread = {}, ws;
-    // 准备一个提示音
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    let activeId = "", allMsgs = [], unreadCount = {}, ws;
 
-    function start() {
+    function connect() {
+        // 替换为你的 Render 地址
         ws = new WebSocket('wss://page-c4hm.onrender.com');
+
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
             const msgs = res.type === "history" ? res.data : [res.data];
             
             msgs.forEach(m => {
-                const from = m.from.toLowerCase();
-                if(from !== 'admin' && from !== activeId && res.type !== "history") {
-                    unread[from] = true;
-                    audio.play().catch(()=>{}); // 播放声音
-                }
                 allMsgs.push(m);
+                const from = String(m.from).toLowerCase();
+                // 如果不是自己发的，且不是当前正在对话的人，且是新消息，计入未读
+                if (from !== 'admin' && from !== activeId && res.type !== "history") {
+                    unreadCount[from] = (unreadCount[from] || 0) + 1;
+                }
             });
-            refresh();
+            renderAll();
         };
-        ws.onclose = () => setTimeout(start, 2000);
+
+        ws.onclose = () => setTimeout(connect, 3000);
     }
 
-    function refresh() {
+    function renderAll() {
+        // 1. 刷新左侧列表
         const users = [...new Set(allMsgs.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
-        
-        document.getElementById('sidebar').innerHTML = users.map(u => `
-            <div class="u-item ${u===activeId?'active':''}" onclick="select('${u}')">
-                ${u} ${unread[u] ? '<span class="dot"></span>' : ''}
+        const listDiv = document.getElementById('u-list');
+        listDiv.innerHTML = users.map(u => `
+            <div class="u-item ${u === activeId ? 'active' : ''}" onclick="selectUser('${u}')">
+                ${u.substr(0, 6)}
+                ${unreadCount[u] ? `<div class="badge">${unreadCount[u]}</div>` : ''}
             </div>
         `).join("");
 
+        // 2. 刷新右侧聊天内容
         if (!activeId) return;
-        document.getElementById('box').innerHTML = allMsgs.filter(m => (m.from === activeId || m.to === activeId))
-            .map(m => `
-                <div class="row ${m.from==='admin'?'admin':''}">
-                    <div class="bubble">${m.type==='img' ? '<img src="'+m.text+'">' : m.text}</div>
-                </div>
-            `).join("");
+        document.getElementById('cur-user').innerText = "正在咨询: " + activeId;
+        document.getElementById('ipt').disabled = false;
+
         const box = document.getElementById('box');
+        box.innerHTML = allMsgs.filter(m => m.from === activeId || m.to === activeId).map(m => {
+            const isAdmin = m.from === 'admin';
+            const avatar = isAdmin ? 'https://dummyimage.com/100/95ec69/fff&text=客服' : 'https://dummyimage.com/100/ccc/333&text=访客';
+            
+            let content;
+            if (m.type === 'img') {
+                content = `<img src="${m.text}" class="bubble-img" onclick="viewImg('${m.text}')">`;
+            } else {
+                content = `<div class="bubble-txt">${m.text}</div>`;
+            }
+
+            return `
+                <div class="msg-row ${isAdmin ? 'admin' : 'visitor'}">
+                    <div class="avatar"><img src="${avatar}"></div>
+                    ${content}
+                </div>
+            `;
+        }).join("");
         box.scrollTop = box.scrollHeight;
     }
 
-    function select(id) {
-        activeId = id;
-        unread[id] = false; // 清除红点
-        refresh();
+    function selectUser(id) {
+        activeId = id.toLowerCase();
+        unreadCount[id] = 0; // 清空未读
+        renderAll();
     }
 
-    function send() {
-        const i = document.getElementById('ipt');
-        if (!activeId || !i.value) return;
-        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: i.value, type: 'text' }));
-        i.value = '';
+    function sendText() {
+        const ipt = document.getElementById('ipt');
+        if (!activeId || !ipt.value.trim()) return;
+        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: ipt.value, type: 'text' }));
+        ipt.value = '';
+        ipt.style.height = '40px';
     }
-    start();
+
+    function adminSendImg(el) {
+        const file = el.files[0];
+        if (!file || !activeId) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            ws.send(JSON.stringify({ from: 'admin', to: activeId, text: e.target.result, type: 'img' }));
+            el.value = '';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function viewImg(src) {
+        document.getElementById('viewer-img').src = src;
+        document.getElementById('viewer').style.display = 'flex';
+    }
+
+    // 输入框自动高度
+    document.getElementById('ipt').oninput = function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    };
+
+    connect();
 </script>
 </body>
 </html>
