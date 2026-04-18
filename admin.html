@@ -4,29 +4,38 @@
     <meta charset="UTF-8"><title>客服后台</title>
     <style>
         body { display:flex; height:100vh; margin:0; font-family:sans-serif; }
-        #side { width:180px; background:#2c2c2c; color:#fff; overflow-y:auto; }
-        .u-item { padding:15px; border-bottom:1px solid #3d3d3d; cursor:pointer; }
-        .u-item.active { background:#07c160; }
+        #side { width:180px; background:#2c2c2c; color:#fff; display:flex; flex-direction:column; }
+        #u-list { flex:1; overflow-y:auto; }
+        .u-item { padding:15px; border-bottom:1px solid #3d3d3d; cursor:pointer; font-size:13px; }
+        .u-item.active { background:#07c160; font-weight:bold; }
         #main { flex:1; display:flex; flex-direction:column; background:#eee; }
         #box { flex:1; overflow-y:auto; padding:20px; }
-        .admin-row { display:flex; justify-content:flex-end; margin-bottom:10px; }
-        .user-row { display:flex; justify-content:flex-start; margin-bottom:10px; }
-        .bubble { padding:8px 12px; background:#fff; border-radius:5px; max-width:70%; }
-        .admin-row .bubble { background:#95ec69; }
+        .row { display:flex; margin-bottom:10px; }
+        .row.admin { justify-content:flex-end; }
+        .bubble { padding:8px 12px; background:#fff; border-radius:5px; max-width:75%; box-shadow:0 1px 1px rgba(0,0,0,0.05); }
+        .admin .bubble { background:#95ec69; }
+        #bar { padding:15px; background:#fff; display:flex; border-top:1px solid #ddd; }
+        input { flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; outline:none; }
+        button { margin-left:10px; padding:0 20px; background:#07c160; color:#fff; border:none; border-radius:4px; }
     </style>
 </head>
 <body>
-    <div id="side"></div>
+    <div id="side">
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid #111;">访客列表</div>
+        <div id="u-list"></div>
+    </div>
     <div id="main">
-        <div id="box"></div>
-        <div style="padding:15px; background:#fff; display:flex;">
-            <input id="ipt" style="flex:1; padding:10px;" placeholder="回复选中的访客...">
-            <button onclick="send()" style="width:80px; margin-left:10px; background:#07c160; color:#fff; border:none; border-radius:4px;">发送</button>
+        <div id="box">选择一个用户开始聊天</div>
+        <div id="bar">
+            <input id="ipt" placeholder="输入回复内容...">
+            <button onclick="send()">发送</button>
         </div>
     </div>
 
 <script>
-    let activeId = "", allMsgs = [], ws;
+    let activeId = ""; // 当前选中的访客ID
+    let allMsgs = [];
+    let ws;
 
     function start() {
         ws = new WebSocket('wss://page-c4hm.onrender.com');
@@ -34,43 +43,60 @@
             const res = JSON.parse(e.data);
             if (res.type === "history") allMsgs = res.data;
             else allMsgs.push(res.data);
-            refresh();
+            updateUI();
         };
         ws.onclose = () => setTimeout(start, 2000);
     }
 
-    function refresh() {
+    function updateUI() {
+        // 1. 提取去重后的访客ID（确保纯净，全小写）
         const users = [...new Set(allMsgs.map(m => {
-            const f = String(m.from).toLowerCase();
-            const t = String(m.to).toLowerCase();
+            const f = String(m.from).toLowerCase().trim();
+            const t = String(m.to).toLowerCase().trim();
             return f === 'admin' ? t : f;
         }))].filter(u => u !== 'admin');
 
-        document.getElementById('side').innerHTML = users.map(u => `
-            <div class="u-item ${u===activeId?'active':''}" onclick="activeId='${u}';refresh()">${u}</div>
+        // 2. 渲染侧边栏
+        document.getElementById('u-list').innerHTML = users.map(u => `
+            <div class="u-item ${u === activeId ? 'active' : ''}" onclick="selectUser('${u}')">
+                ${u}
+            </div>
         `).join("");
 
+        // 3. 渲染聊天区
+        const box = document.getElementById('box');
         if (!activeId) return;
-        document.getElementById('box').innerHTML = allMsgs.filter(m => {
-            const f = String(m.from).toLowerCase();
-            const t = String(m.to).toLowerCase();
+        
+        box.innerHTML = allMsgs.filter(m => {
+            const f = String(m.from).toLowerCase().trim();
+            const t = String(m.to).toLowerCase().trim();
             return f === activeId || t === activeId;
         }).map(m => `
-            <div class="${String(m.from).toLowerCase()==='admin'?'admin-row':'user-row'}">
+            <div class="row ${String(m.from).toLowerCase().trim()==='admin'?'admin':''}">
                 <div class="bubble">${m.text}</div>
             </div>
         `).join("");
-        const box = document.getElementById('box');
         box.scrollTop = box.scrollHeight;
+    }
+
+    function selectUser(id) {
+        activeId = id.toLowerCase().trim();
+        updateUI();
     }
 
     function send() {
         const i = document.getElementById('ipt');
         if (!activeId || !i.value.trim()) return;
-        // 关键：发送时确保 to 也是小写
-        ws.send(JSON.stringify({ from: 'admin', to: activeId.toLowerCase(), text: i.value }));
+        
+        // 核心：发给选中的 ID
+        ws.send(JSON.stringify({ 
+            from: 'admin', 
+            to: activeId, 
+            text: i.value.trim() 
+        }));
         i.value = '';
     }
+
     start();
 </script>
 </body>
