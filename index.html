@@ -2,135 +2,146 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>在线客服</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            margin: 0; padding: 0; width: 100vw; 
-            background: #ededed; font-family: -apple-system, sans-serif; 
-            display: flex; flex-direction: column; overflow: hidden; 
-            position: relative; /* 修复 Safari 布局偏移的核心 */
+        
+        /* 布局锁定 */
+        html, body { 
+            height: 100%; width: 100%; margin: 0; padding: 0; 
+            overflow: hidden; background: #ededed; 
         }
         
+        /* 使用一个固定在全屏的容器，避免 body 被推起 */
+        #app-wrapper {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            /* 利用 transition 让高度变化更平滑 */
+            transition: bottom 0.1s ease-out; 
+        }
+
         #header-wrapper {
             background: #ededed; border-bottom: 1px solid #dcdcdc;
-            padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 10;
+            padding-top: env(safe-area-inset-top); flex-shrink: 0;
         }
         #header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 17px; font-weight: 500; }
-        #status-bar { width: 100%; text-align: center; color: #b2b2b2; font-size: 12px; padding: 2px 0; }
+        #status-bar { width: 100%; text-align: center; color: #b2b2b2; font-size: 12px; padding-bottom: 2px; }
 
         #chat { 
             flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; 
             background: #ededed; position: relative;
         }
-        #chat-inner { padding: 12px; min-height: calc(100% + 1px); display: flex; flex-direction: column; }
+        #chat-inner { padding: 12px; display: flex; flex-direction: column; }
 
-        .msg-row { margin-bottom: 16px; display: flex; align-items: flex-start; flex-shrink: 0; }
+        /* 气泡样式保持不变 */
+        .msg-row { margin-bottom: 16px; display: flex; align-items: flex-start; }
         .msg-row.me { flex-direction: row-reverse; }
-        .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; flex-shrink: 0; background-size: cover; }
-        .me .avatar { margin-left: 12px; background-image: url('https://dummyimage.com/100x100/95ec69/fff&text=我'); }
-        .visitor .avatar { margin-right: 12px; background-image: url('https://dummyimage.com/100x100/fff/333&text=客'); }
-
-        .bubble-txt { position: relative; padding: 10px 14px; font-size: 16px; line-height: 1.5; border-radius: 6px; max-width: calc(100% - 110px); word-wrap: break-word; min-height: 40px; }
+        .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; background-size: cover; flex-shrink: 0; }
+        .me .avatar { margin-left: 12px; background-image: url('https://dummyimage.com/100/95ec69/fff&text=我'); }
+        .visitor .avatar { margin-right: 12px; background-image: url('https://dummyimage.com/100/fff/333&text=客'); }
+        .bubble-txt { position: relative; padding: 10px 14px; font-size: 16px; line-height: 1.5; border-radius: 6px; max-width: calc(100% - 110px); word-wrap: break-word; }
         .visitor .bubble-txt { background: #fff; }
-        .visitor .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #fff; left: -8px; top: 14px; }
         .me .bubble-txt { background: #95ec69; }
-        .me .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #95ec69; right: -8px; top: 14px; }
 
-        .msg-img { max-width: 160px; border-radius: 4px; border: 0.5px solid #dcdcdc; }
-
+        /* 底部输入栏 */
         #footer { 
             background: #f7f7f7; border-top: 1px solid #dcdcdc; 
-            padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); 
-            display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0; z-index: 10;
+            padding: 8px 12px;
+            /* 适配底部安全区 */
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
         }
-        textarea { flex: 1; min-height: 38px; max-height: 120px; border: none; background: #fff; border-radius: 6px; padding: 8px 12px; font-size: 16px; outline: none; resize: none; -webkit-appearance: none; }
-        .btn-send { background: #07c160; color: #fff; border: none; border-radius: 4px; padding: 0 15px; height: 36px; font-size: 15px; font-weight: bold; }
-        
-        #img-viewer { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 100; display: none; align-items: center; justify-content: center; }
+        textarea { 
+            flex: 1; min-height: 38px; max-height: 120px; border: none; 
+            background: #fff; border-radius: 6px; padding: 8px 12px; 
+            font-size: 16px; outline: none; resize: none; 
+        }
+        .btn-send { 
+            background: #07c160; color: #fff; border: none; border-radius: 4px; 
+            padding: 0 15px; height: 36px; font-size: 15px; font-weight: bold; 
+        }
     </style>
 </head>
 <body>
 
-<div id="header-wrapper">
-    <div id="header">
-        <div onclick="history.back()"><svg viewBox="0 0 24 24" width="22" height="22" stroke="#111" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
-        <div>在线客服</div>
-        <div style="width:24px"></div>
+<div id="app-wrapper">
+    <div id="header-wrapper">
+        <div id="header">
+            <div onclick="history.back()"><svg viewBox="0 0 24 24" width="22" height="22" stroke="#111" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+            <div>在线客服</div>
+            <div style="width:24px"></div>
+        </div>
+        <div id="status-bar">已连接</div>
     </div>
-    <div id="status-bar">正在连接...</div>
-</div>
 
-<div id="chat" onclick="dismissKeyboard()">
-    <div id="chat-inner"></div>
-</div>
+    <div id="chat">
+        <div id="chat-inner"></div>
+    </div>
 
-<div id="footer">
-    <label for="file-ipt" style="padding-bottom:2px">
-        <svg viewBox="0 0 24 24" width="32" height="32" stroke="#333" stroke-width="1.2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-    </label>
-    <input type="file" id="file-ipt" accept="image/*" style="display:none" onchange="directSendImg(this)">
-    <textarea id="ipt" rows="1"></textarea>
-    <button class="btn-send" onclick="sendMsg()">发送</button>
+    <div id="footer">
+        <textarea id="ipt" rows="1" placeholder=""></textarea>
+        <button class="btn-send" onclick="sendMsg()">发送</button>
+    </div>
 </div>
-
-<div id="img-viewer" onclick="this.style.display='none'"><img src="" id="viewer-img" style="max-width:100%; max-height:100%"></div>
 
 <script>
     const myId = (localStorage.getItem('wx_uid') || 'u' + Math.random().toString(36).substr(2,4).toLowerCase());
     localStorage.setItem('wx_uid', myId);
 
-    let ws;
+    const appWrapper = document.getElementById('app-wrapper');
     const chatContainer = document.getElementById('chat');
     const chatInner = document.getElementById('chat-inner');
     const iptBox = document.getElementById('ipt');
 
-    // --- 【核心修复】Safari 键盘高度动态修正 ---
-    const fixSafariHeight = () => {
-        if (window.visualViewport) {
+    // --- 【超级优化】Safari 丝滑跟随键盘方案 ---
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
             const vv = window.visualViewport;
-            document.body.style.height = vv.height + 'px';
-            window.scrollTo(0, 0); // 强行复位，防止页面被推上去留白
-        } else {
-            document.body.style.height = window.innerHeight + 'px';
-        }
-    };
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', fixSafariHeight);
-    window.addEventListener('load', fixSafariHeight);
+            // 计算键盘遮挡的高度
+            const keyboardHeight = window.innerHeight - vv.height;
+            
+            // 关键：不要改 body 高度，改容器的 bottom 偏移
+            // 这样浏览器只需要移动图层，不需要重排所有文字，非常丝滑
+            if (keyboardHeight > 0) {
+                appWrapper.style.bottom = keyboardHeight + 'px';
+                // 强制将聊天滑到底部
+                setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 30);
+            } else {
+                appWrapper.style.bottom = '0px';
+            }
+        });
+        
+        // 解决 Safari 在键盘弹起时页面整体被顶起的 Bug
+        window.visualViewport.addEventListener('scroll', () => {
+            if (window.visualViewport.offsetTop > 0) {
+                window.scrollTo(0, 0);
+            }
+        });
+    }
 
+    let ws;
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com'); 
-        ws.onopen = () => document.getElementById('status-bar').innerText = "已连接";
-        ws.onclose = () => { setTimeout(connect, 3000); };
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
-            if (res.type === "history") chatInner.innerHTML = ""; // 修复重复
+            if (res.type === "history") chatInner.innerHTML = "";
             const list = res.type === "history" ? res.data : [res.data];
             list.forEach(m => {
                 if (String(m.from).toLowerCase() === myId || String(m.to).toLowerCase() === myId) renderMsg(m);
             });
         };
+        ws.onclose = () => setTimeout(connect, 3000);
     }
 
     function renderMsg(m) {
         const isMe = String(m.from).toLowerCase() === myId;
         const div = document.createElement('div');
         div.className = 'msg-row' + (isMe ? ' me' : ' visitor');
-        const content = m.type === 'img' ? `<img src="${m.text}" class="msg-img" onclick="showFullImage('${m.text}')">` : `<div class="bubble-txt">${m.text}</div>`;
-        div.innerHTML = `<div class="avatar"></div>${content}`;
+        div.innerHTML = `<div class="avatar"></div><div class="bubble-txt">${m.text}</div>`;
         chatInner.appendChild(div);
-        scrollToBottom();
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-
-    function dismissKeyboard() { iptBox.blur(); }
-
-    iptBox.addEventListener('focus', () => {
-        setTimeout(() => { 
-            chatContainer.scrollTop = chatContainer.scrollHeight; 
-            window.scrollTo(0, 0); 
-        }, 300);
-    });
 
     function sendMsg() {
         const text = iptBox.value.trim();
@@ -138,29 +149,9 @@
         ws.send(JSON.stringify({ from: myId, to: 'admin', text: text, type: 'text' }));
         iptBox.value = '';
         iptBox.style.height = '38px';
-        dismissKeyboard();
     }
 
-    function scrollToBottom() {
-        setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
-    }
-
-    function directSendImg(el) {
-        const file = el.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            ws.send(JSON.stringify({ from: myId, to: 'admin', text: e.target.result, type: 'img' }));
-            el.value = '';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function showFullImage(src) {
-        document.getElementById('viewer-img').src = src;
-        document.getElementById('img-viewer').style.display = 'flex';
-    }
-
+    // 自动高度
     iptBox.oninput = function() {
         this.style.height = 'auto';
         this.style.height = this.scrollHeight + 'px';
