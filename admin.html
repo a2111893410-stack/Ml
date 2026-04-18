@@ -5,34 +5,23 @@
     <style>
         body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; }
         #side { width: 180px; background: #2c2c2c; color: #fff; overflow-y: auto; }
-        .u-item { padding: 15px; border-bottom: 1px solid #3d3d3d; cursor: pointer; }
-        .u-item.active { background: #07c160; }
+        .u { padding: 15px; border-bottom: 1px solid #3d3d3d; cursor: pointer; opacity: 0.7; }
+        .u.active { background: #07c160; opacity: 1; font-weight: bold; }
         #main { flex: 1; display: flex; flex-direction: column; background: #eee; }
         #msgs { flex: 1; overflow-y: auto; padding: 20px; }
-        #bar { padding: 15px; background: #fff; display: flex; }
-        textarea { flex: 1; height: 50px; border: 1px solid #ddd; }
-        button { width: 80px; margin-left: 10px; background: #07c160; color: #fff; border: none; }
-        .row { display: flex; margin-bottom: 10px; }
-        .right { justify-content: flex-end; }
-        .bubble { max-width: 70%; padding: 8px 12px; border-radius: 5px; background: #fff; }
-        .right .bubble { background: #95ec69; }
+        #bar { padding: 15px; background: #fff; display: flex; border-top: 1px solid #ddd; }
+        textarea { flex: 1; height: 40px; }
     </style>
 </head>
 <body>
     <div id="side"></div>
     <div id="main">
         <div id="msgs"></div>
-        <div id="bar">
-            <textarea id="ipt" placeholder="选择用户回信..."></textarea>
-            <button onclick="send()">发送</button>
-        </div>
+        <div id="bar"><textarea id="ipt" placeholder="选择用户回复"></textarea><button onclick="send()" style="width:70px;margin-left:10px;background:#07c160;color:#fff;border:none">发送</button></div>
     </div>
 
 <script>
-    let activeId = "";
-    let messageDb = {}; // { userId: [msgs] }
-    let shownMsgIds = new Set();
-    let socket;
+    let activeId = "", db = {}, shownIds = new Set(), socket;
 
     function connect() {
         socket = new WebSocket('wss://page-c4hm.onrender.com');
@@ -40,62 +29,49 @@
         socket.onmessage = (e) => {
             const res = JSON.parse(e.data);
             if (res.type === "history") {
-                res.list.forEach(m => storeAndRender(m));
-            } else if (res.type === "msg") {
-                storeAndRender(res);
+                res.list.forEach(m => store(m));
+            } else {
+                store(res);
             }
+            renderUI();
         };
         socket.onclose = () => setTimeout(connect, 2000);
     }
 
-    function storeAndRender(m) {
-        if (shownMsgIds.has(m.msgId)) return;
-        shownMsgIds.add(m.msgId);
-        
-        // 确定属于哪个访客的会话
+    function store(m) {
+        if (shownIds.has(m.msgId)) return;
+        shownIds.add(m.msgId);
         const talker = m.from === "admin" ? m.to : m.from;
-        if (!messageDb[talker]) messageDb[talker] = [];
-        messageDb[talker].push(m);
-        
-        updateSidebar();
-        if (talker === activeId) updateChatView();
+        if (!db[talker]) db[talker] = [];
+        db[talker].push(m);
     }
 
-    function updateSidebar() {
+    function renderUI() {
         const side = document.getElementById('side');
-        side.innerHTML = Object.keys(messageDb).map(uid => 
-            `<div class="u-item ${uid === activeId ? 'active' : ''}" onclick="selectUser('${uid}')">${uid}</div>`
+        side.innerHTML = Object.keys(db).map(uid => 
+            `<div class="u ${uid === activeId ? 'active' : ''}" onclick="changeUser('${uid}')">${uid}</div>`
         ).join("");
-    }
 
-    function selectUser(uid) {
-        activeId = uid;
-        updateSidebar();
-        updateChatView();
-    }
-
-    function updateChatView() {
         const box = document.getElementById('msgs');
-        box.innerHTML = (messageDb[activeId] || []).map(m => `
-            <div class="row ${m.from === 'admin' ? 'right' : 'left'}">
-                <div class="bubble">${m.text}</div>
+        box.innerHTML = (db[activeId] || []).map(m => `
+            <div style="display:flex;margin-bottom:10px;justify-content:${m.from==='admin'?'flex-end':'flex-start'}">
+                <div style="background:${m.from==='admin'?'#95ec69':'#fff'};padding:8px;border-radius:5px;max-width:70%">${m.text}</div>
             </div>
         `).join("");
         box.scrollTop = box.scrollHeight;
     }
 
+    function changeUser(uid) {
+        activeId = uid;
+        renderUI();
+    }
+
     function send() {
-        const ipt = document.getElementById('ipt');
-        if (!ipt.value.trim() || !activeId) return;
-        
-        // 发送给选中的访客
-        socket.send(JSON.stringify({
-            from: "admin",
-            to: activeId,
-            text: ipt.value,
-            type: "msg"
-        }));
-        ipt.value = "";
+        const i = document.getElementById('ipt');
+        if (!i.value.trim() || !activeId) return;
+        const msg = { from: "admin", to: activeId, text: i.value, type: "msg" };
+        socket.send(JSON.stringify(msg));
+        i.value = "";
     }
     connect();
 </script>
