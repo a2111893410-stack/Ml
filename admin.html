@@ -1,57 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>客服</title>
+    <meta charset="UTF-8"><title>客服后台</title>
     <style>
-        body { display:flex; height:100vh; margin:0; }
-        #list { width:100px; background:#333; color:#fff; font-size:12px; overflow-y:auto; }
-        #main { flex:1; display:flex; flex-direction:column; }
-        #box { flex:1; overflow-y:auto; padding:10px; background:#eee; }
-        .active { background:#07c160; }
+        body { display:flex; height:100vh; margin:0; font-family:sans-serif; }
+        #user_list { width:150px; background:#2c2c2c; color:#fff; overflow-y:auto; }
+        .user_item { padding:15px; border-bottom:1px solid #3d3d3d; cursor:pointer; font-size:13px; }
+        .user_item.active { background:#07c160; }
+        #chat_main { flex:1; display:flex; flex-direction:column; background:#eee; }
+        #chat_records { flex:1; overflow-y:auto; padding:15px; }
+        .line { display:flex; margin-bottom:10px; }
+        .line.admin { justify-content:flex-end; }
+        .bubble { padding:8px 12px; background:#fff; border-radius:5px; max-width:70%; font-size:14px; }
+        .admin .bubble { background:#95ec69; }
     </style>
 </head>
 <body>
-    <div id="list"></div>
-    <div id="main">
-        <div id="box"></div>
-        <div style="padding:10px; display:flex;">
-            <input id="ipt" style="flex:1"><button onclick="send()">回信</button>
+    <div id="user_list"></div>
+    <div id="chat_main">
+        <div id="chat_records"></div>
+        <div style="padding:10px; background:#fff; display:flex;">
+            <input id="reply_ipt" style="flex:1; padding:10px; border:1px solid #ddd;">
+            <button onclick="doReply()" style="width:80px; margin-left:10px; background:#07c160; color:#fff; border:none;">发送</button>
         </div>
     </div>
 <script>
-    let activeId = '', msgs = [], ws;
-    function start() {
+    let curId = '', allMsgs = [], ws;
+
+    function startService() {
         ws = new WebSocket('wss://page-c4hm.onrender.com');
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
-            if (res.type === "history") msgs = res.data;
-            else msgs.push(res.data);
-            render();
+            if (res.type === "history") { allMsgs = res.data; }
+            else if (res.type === "new") { allMsgs.push(res.data); }
+            refreshUI();
         };
-        ws.onclose = () => setTimeout(start, 2000);
+        ws.onclose = () => setTimeout(startService, 2000);
     }
 
-    function render() {
-        const users = [...new Set(msgs.map(m => m.from==='admin'?m.to:m.from))].filter(u => u !== 'admin');
-        document.getElementById('list').innerHTML = users.map(u => 
-            `<div style="padding:10px" class="${u===activeId?'active':''}" onclick="activeId='${u}';render()">${u}</div>`
+    function refreshUI() {
+        const side = document.getElementById('user_list');
+        // 找出所有非 admin 的 ID
+        const users = [...new Set(allMsgs.map(m => 
+            String(m.from).toLowerCase() === 'admin' ? String(m.to).toLowerCase() : String(m.from).toLowerCase()
+        ))].filter(u => u !== 'admin');
+
+        side.innerHTML = users.map(u => 
+            `<div class="user_item ${u===curId?'active':''}" onclick="curId='${u}';refreshUI()">${u}</div>`
         ).join('');
 
-        document.getElementById('box').innerHTML = msgs.filter(m => (m.from===activeId || m.to===activeId)).map(m => `
-            <div style="text-align:${m.from==='admin'?'right':'left'}; margin:5px;">
-                <span style="background:${m.from==='admin'?'#95ec69':'#fff'}; padding:5px; border-radius:3px; font-size:14px;">${m.text}</span>
+        const box = document.getElementById('chat_records');
+        if (!curId) { box.innerHTML = '<div style="color:#999;text-align:center;margin-top:20px;">请选择左侧用户</div>'; return; }
+
+        box.innerHTML = allMsgs.filter(m => {
+            const f = String(m.from).toLowerCase();
+            const t = String(m.to).toLowerCase();
+            return (f === curId || t === curId);
+        }).map(m => `
+            <div class="line ${String(m.from).toLowerCase()==='admin'?'admin':'user'}">
+                <div class="bubble">${m.text}</div>
             </div>
         `).join('');
-        const b = document.getElementById('box'); b.scrollTop = b.scrollHeight;
+        box.scrollTop = box.scrollHeight;
     }
 
-    function send() {
-        const i = document.getElementById('ipt');
-        if (!activeId || !i.value) return;
-        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: i.value }));
-        i.value = '';
+    function doReply() {
+        const ipt = document.getElementById('reply_ipt');
+        if (!curId || !ipt.value.trim()) return;
+        ws.send(JSON.stringify({ from: 'admin', to: curId, text: ipt.value.trim(), type: 'msg' }));
+        ipt.value = '';
     }
-    start();
+    startService();
 </script>
 </body>
 </html>
