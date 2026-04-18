@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>微信客服 - 管理端</title>
+    <title>微信客服 - 最终版</title>
     <style>
-        /* --- 全局样式设定 --- */
+        /* --- 核心布局：iPhone 15 Pro Max 全屏锁定 --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; padding: 0; height: 100dvh; width: 100vw; 
@@ -13,7 +13,7 @@
             font-family: -apple-system, sans-serif; overflow: hidden; position: fixed; 
         }
 
-        /* --- 顶部栏 (WeChat Style) --- */
+        /* 顶部栏 (WeChat Style) */
         #header { 
             height: 44px; background: #ededed; border-bottom: 1px solid #dcdcdc; 
             display: flex; align-items: center; justify-content: space-between; 
@@ -21,49 +21,48 @@
             padding-top: env(safe-area-inset-top);
         }
 
-        /* --- 中间主体区 (包含侧边列表和聊天区) --- */
+        /* 中间主体区 */
         #container { flex: 1; display: flex; overflow: hidden; }
 
-        /* 左侧访客列表：夹在头尾之间 */
+        /* 左侧访客列表 */
         #side-list { 
-            width: 85px; background: #2e2e2e; display: flex; flex-direction: column; 
+            width: 80px; background: #2e2e2e; display: flex; flex-direction: column; 
             flex-shrink: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
         .u-item { 
-            padding: 15px 5px; text-align: center; color: #ccc; cursor: pointer; 
+            padding: 15px 4px; text-align: center; color: #aaa; cursor: pointer; 
             font-size: 12px; position: relative; border-bottom: 1px solid #3d3d3d;
         }
-        .u-item.active { background: #3a3a3a; color: #07c160; font-weight: bold; }
+        .u-item.active { background: #3a3a3a; color: #07c160; }
         .badge { 
             position: absolute; top: 4px; right: 4px; background: #fa5151; color: white; 
             border-radius: 10px; min-width: 16px; height: 16px; line-height: 16px; 
             font-size: 10px; padding: 0 4px; 
         }
 
-        /* 右侧聊天区 */
+        /* 右侧对话区 */
         #chat-area { flex: 1; background: #ededed; display: flex; flex-direction: column; overflow: hidden; }
         #box { flex: 1; overflow-y: auto; padding: 15px 10px; -webkit-overflow-scrolling: touch; }
 
-        /* 微信风气泡复刻 */
+        /* 气泡样式复刻 */
         .msg-row { display: flex; margin-bottom: 16px; align-items: flex-start; }
         .msg-row.admin { flex-direction: row-reverse; }
         .avatar { width: 38px; height: 38px; border-radius: 4px; background: #fff; flex-shrink: 0; overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
         .bubble-txt { 
             position: relative; max-width: 65%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; 
             margin: 0 10px; min-height: 38px; word-wrap: break-word;
         }
-        .visitor .bubble-txt { background: #fff; color: #000; }
+        .visitor .bubble-txt { background: #fff; }
         .visitor .bubble-txt::before { content: ""; position: absolute; left: -9px; top: 12px; border: 5px solid transparent; border-right-color: #fff; }
         .admin .bubble-txt { background: #95ec69; }
         .admin .bubble-txt::before { content: ""; position: absolute; right: -9px; top: 12px; border: 5px solid transparent; border-left-color: #95ec69; }
-        .bubble-img { max-width: 160px; border-radius: 4px; margin: 0 10px; border: 1px solid #dcdcdc; display: block; background: #fff; }
+        .bubble-img { max-width: 160px; border-radius: 4px; margin: 0 10px; border: 1px solid #dcdcdc; display: block; }
 
-        /* --- 底部输入栏 (WeChat Style) --- */
+        /* 底部输入栏 */
         #footer { 
             background: #f7f7f7; border-top: 1px solid #dcdcdc; 
-            padding: 8px 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); 
+            padding: 8px 10px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
             flex-shrink: 0;
         }
         #input-row { display: flex; align-items: flex-end; gap: 8px; }
@@ -73,10 +72,11 @@
             min-height: 40px; max-height: 100px; resize: none;
             -webkit-appearance: none;
         }
-        .icon-btn { width: 30px; height: 30px; margin-bottom: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .icon-btn { width: 32px; height: 32px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .send-btn { 
-            padding: 8px 15px; background: #07c160; color: #fff; border: none; 
-            border-radius: 4px; font-weight: bold; margin-bottom: 2px;
+            height: 36px; padding: 0 15px; background: #07c160; color: #fff; 
+            border: none; border-radius: 4px; font-weight: bold; margin-bottom: 2px;
+            /* 默认显示，增强操作直观性 */
         }
 
         /* 预览层 */
@@ -88,13 +88,12 @@
 
 <div id="header">
     <span style="font-size: 20px;">‹</span>
-    <span id="title-name">在线客服</span>
+    <span id="title-name">WePro 客服端</span>
     <span style="font-size: 20px;">···</span>
 </div>
 
 <div id="container">
     <div id="side-list"></div>
-
     <div id="chat-area">
         <div id="box" onclick="dismissKeyboard()"></div>
     </div>
@@ -106,8 +105,10 @@
             <svg viewBox="0 0 24 24" width="28" height="28" fill="#555"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             <input type="file" id="file-ipt" accept="image/*" style="display:none" onchange="directSendImg(this)">
         </label>
-        <textarea id="ipt" rows="1" placeholder="回复访客..." disabled></textarea>
-        <button id="send-btn" class="send-btn" style="display:none;" onclick="sendText()">发送</button>
+        
+        <textarea id="ipt" rows="1" placeholder="回复..." disabled onkeydown="handleKeyDown(event)"></textarea>
+        
+        <button id="send-btn" class="send-btn" onclick="sendText()">发送</button>
     </div>
 </div>
 
@@ -116,11 +117,10 @@
 <script>
     let activeId = "", allMsgs = [], unreadMap = {}, ws;
     const ipt = document.getElementById('ipt');
-    const sendBtn = document.getElementById('send-btn');
+    const box = document.getElementById('box');
 
     function connect() {
-        // 请在此处替换为你的 Render 地址
-        ws = new WebSocket('wss://page-c4hm.onrender.com');
+        ws = new WebSocket('wss://page-c4hm.onrender.com'); // 确保这是你的Render链接
 
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
@@ -132,28 +132,26 @@
                     unreadMap[from] = (unreadMap[from] || 0) + 1;
                 }
             });
-            renderAll();
+            render();
         };
         ws.onclose = () => setTimeout(connect, 3000);
     }
 
-    function renderAll() {
-        // 1. 渲染侧边列表
+    function render() {
+        // 渲染访客列表
         const users = [...new Set(allMsgs.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
-        const listDiv = document.getElementById('side-list');
-        listDiv.innerHTML = users.map(u => `
+        document.getElementById('side-list').innerHTML = users.map(u => `
             <div class="u-item ${u === activeId ? 'active' : ''}" onclick="selectUser('${u}')">
                 ${u.substr(0, 6)}
                 ${unreadMap[u] ? `<div class="badge">${unreadMap[u]}</div>` : ''}
             </div>
         `).join("");
 
-        // 2. 渲染对话内容
         if (!activeId) return;
         ipt.disabled = false;
         document.getElementById('title-name').innerText = activeId;
 
-        const box = document.getElementById('box');
+        // 渲染对话
         box.innerHTML = allMsgs.filter(m => m.from === activeId || m.to === activeId).map(m => {
             const isAdmin = m.from === 'admin';
             const avatar = isAdmin ? 'https://dummyimage.com/100/95ec69/fff&text=我' : 'https://dummyimage.com/100/ccc/333&text=访';
@@ -163,25 +161,43 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    // 选中用户并聚焦
     function selectUser(id) {
         activeId = id.toLowerCase();
         unreadMap[id] = 0;
-        renderAll();
-        ipt.focus(); // 选中后自动聚焦输入框
+        render();
+        setTimeout(() => ipt.focus(), 100);
     }
 
-    // 点击背景隐藏键盘
+    // 键盘管理
     function dismissKeyboard() {
         ipt.blur();
     }
 
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendText();
+        }
+    }
+
+    // --- 消息发送功能核心 ---
     function sendText() {
-        if (!activeId || !ipt.value.trim()) return;
-        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: ipt.value, type: 'text' }));
+        const val = ipt.value.trim();
+        if (!activeId) { alert("请先选择访客"); return; }
+        if (!val) return;
+
+        // 发送给服务器
+        ws.send(JSON.stringify({
+            from: 'admin',
+            to: activeId,
+            text: val,
+            type: 'text'
+        }));
+
         ipt.value = '';
         ipt.style.height = '40px';
-        sendBtn.style.display = 'none';
-        ipt.blur(); // 发送完毕隐藏键盘
+        // 不自动 blur，方便连续输入；如果想发送后收起键盘，可加 ipt.blur()
     }
 
     function directSendImg(el) {
@@ -200,11 +216,10 @@
         document.getElementById('viewer').style.display = 'flex';
     }
 
-    // 监听输入，控制发送按钮显示和高度自适应
+    // 输入框自动高度
     ipt.oninput = function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
-        sendBtn.style.display = this.value.length > 0 ? 'block' : 'none';
     };
 
     connect();
