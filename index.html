@@ -1,74 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>访客</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>访客端</title>
     <style>
-        body { margin:0; display:flex; flex-direction:column; height:100vh; background:#f0f0f0; }
-        #chat { flex:1; overflow-y:auto; padding:10px; }
-        .msg { margin:10px 0; display:flex; }
-        .msg.me { justify-content:flex-end; }
-        .inner { padding:8px 12px; background:#fff; border-radius:5px; max-width:80%; }
-        .me .inner { background:#95ec69; }
-        #bar { display:flex; padding:10px; background:#fff; border-top:1px solid #ddd; }
-        #status { font-size:12px; text-align:center; padding:5px; background:#eee; }
+        body { margin:0; display:flex; flex-direction:column; height:100vh; background:#f0f0f0; font-family:sans-serif; }
+        #status_bar { font-size:12px; text-align:center; padding:5px; background:#ddd; color:#555; }
+        #chat_box { flex:1; overflow-y:auto; padding:15px; -webkit-overflow-scrolling:touch; }
+        .msg_row { margin-bottom:12px; display:flex; animation: fadeIn 0.3s; }
+        .msg_row.is_me { justify-content:flex-end; }
+        .msg_content { padding:10px 14px; background:#fff; border-radius:10px; max-width:75%; font-size:15px; line-height:1.4; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+        .is_me .msg_content { background:#95ec69; }
+        #input_area { display:flex; padding:10px; background:#fff; border-top:1px solid #ddd; }
+        #ipt_msg { flex:1; padding:10px; border:1px solid #ddd; border-radius:5px; outline:none; font-size:16px; }
+        #btn_send { margin-left:10px; padding:0 20px; background:#07c160; color:#fff; border:none; border-radius:5px; font-weight:bold; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
     </style>
 </head>
 <body>
-    <div id="status">正在连接...</div>
-    <div id="chat"></div>
-    <div id="bar">
-        <input id="ipt" style="flex:1; padding:8px;">
-        <button onclick="send()" style="margin-left:5px">发送</button>
+    <div id="status_bar">正在连接服务器...</div>
+    <div id="chat_box"></div>
+    <div id="input_area">
+        <input id="ipt_msg" placeholder="输入消息..." autocomplete="off">
+        <button id="btn_send" onclick="handleSend()">发送</button>
     </div>
 
 <script>
-    const myId = 'U' + Math.random().toString(36).substr(2,4).toUpperCase();
-    let ws;
-    
-    function start() {
-        // 直接写死你的真实地址，不再自动判断
-        ws = new WebSocket('wss://page-c4hm.onrender.com');
+    const MY_UID = ('U' + Math.random().toString(36).substr(2,4)).toLowerCase();
+    let webSocket;
+    const box = document.getElementById('chat_box');
+    const bar = document.getElementById('status_bar');
 
-        ws.onopen = () => document.getElementById('status').innerText = "已连接 (ID: " + myId + ")";
-        ws.onclose = () => {
-            document.getElementById('status').innerText = "连接断开，重连中...";
-            setTimeout(start, 2000);
-        };
-        ws.onerror = () => document.getElementById('status').innerText = "连接失败，请检查网络";
+    function initSocket() {
+        webSocket = new WebSocket('wss://page-c4hm.onrender.com');
 
-        ws.onmessage = (e) => {
-            const res = JSON.parse(e.data);
-            if (res.type === "history") {
-                res.data.forEach(m => draw(m));
-            } else {
-                draw(res.data);
+        webSocket.onopen = () => { bar.innerText = "● 已连接 (我的ID: " + MY_UID + ")"; bar.style.color = "#07c160"; };
+        webSocket.onclose = () => { bar.innerText = "○ 已断开，尝试重连..."; setTimeout(initSocket, 2000); };
+        
+        webSocket.onmessage = (event) => {
+            const raw = JSON.parse(event.data);
+            if (raw.type === "history") {
+                box.innerHTML = "";
+                raw.data.forEach(m => processItem(m));
+            } else if (raw.type === "new") {
+                processItem(raw.data);
             }
         };
     }
 
-    function draw(m) {
-        if (m.from !== myId && m.to !== myId) return;
-        const chat = document.getElementById('chat');
-        const div = document.createElement('div');
-        div.className = 'msg' + (m.from === myId ? ' me' : '');
-        div.innerHTML = `<div class="inner">${m.text}</div>`;
-        chat.appendChild(div);
-        chatBoxScroll();
+    function processItem(m) {
+        // 关键：强制转为小写对比
+        const from = String(m.from).toLowerCase();
+        const to = String(m.to).toLowerCase();
+        
+        if (from === MY_UID || to === MY_UID) {
+            const isMe = (from === MY_UID);
+            const div = document.createElement('div');
+            div.className = 'msg_row' + (isMe ? ' is_me' : '');
+            div.innerHTML = `<div class="msg_content">${m.text}</div>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
     }
 
-    function chatBoxScroll() {
-        const c = document.getElementById('chat');
-        c.scrollTop = c.scrollHeight;
-    }
+    function handleSend() {
+        const ipt = document.getElementById('ipt_msg');
+        const text = ipt.value.trim();
+        if (!text) return;
+        if (webSocket.readyState !== 1) { alert("网络未就绪"); return; }
 
-    function send() {
-        const ipt = document.getElementById('ipt');
-        if (!ipt.value) return;
-        ws.send(JSON.stringify({ from: myId, to: 'admin', text: ipt.value }));
+        const payload = { from: MY_UID, to: 'admin', text: text, type: 'msg' };
+        webSocket.send(JSON.stringify(payload));
         ipt.value = '';
     }
-    start();
+
+    // 绑定回车键
+    document.getElementById('ipt_msg').onkeydown = (e) => { if(e.key === 'Enter') handleSend(); };
+    initSocket();
 </script>
 </body>
 </html>
