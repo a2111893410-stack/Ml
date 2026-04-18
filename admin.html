@@ -1,66 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>客服后台</title>
+    <meta charset="UTF-8"><title>客服</title>
     <style>
-        body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; }
-        #side { width: 160px; background: #2c2c2c; color: #fff; overflow-y: auto; }
-        .utab { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; }
-        .utab.active { background: #07c160; }
-        #main { flex: 1; display: flex; flex-direction: column; background: #eee; }
-        #box { flex: 1; overflow-y: auto; padding: 20px; }
-        .row { display: flex; margin-bottom: 10px; }
-        .row.admin { justify-content: flex-end; }
-        .bubble { padding: 8px 12px; border-radius: 5px; background: #fff; max-width: 70%; }
-        .admin .bubble { background: #95ec69; }
+        body { display:flex; height:100vh; margin:0; }
+        #list { width:100px; background:#333; color:#fff; font-size:12px; overflow-y:auto; }
+        #main { flex:1; display:flex; flex-direction:column; }
+        #box { flex:1; overflow-y:auto; padding:10px; background:#eee; }
+        .active { background:#07c160; }
     </style>
 </head>
 <body>
-    <div id="side"></div>
+    <div id="list"></div>
     <div id="main">
         <div id="box"></div>
-        <div style="padding:15px; background:#fff; display:flex;">
-            <input id="ipt" style="flex:1; padding:10px;" placeholder="输入消息...">
-            <button onclick="send()" style="width:80px; margin-left:10px; background:#07c160; border:none; color:#fff;">回信</button>
+        <div style="padding:10px; display:flex;">
+            <input id="ipt" style="flex:1"><button onclick="send()">回信</button>
         </div>
     </div>
 <script>
-    let activeId = "", msgList = [], ws;
-
-    function connect() {
+    let activeId = '', msgs = [], ws;
+    function start() {
         ws = new WebSocket('wss://page-c4hm.onrender.com');
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
-            if (res.type === "history") { msgList = res.data; }
-            else if (res.type === "new_msg") { msgList.push(res.data); }
+            if (res.type === "history") msgs = res.data;
+            else msgs.push(res.data);
             render();
         };
-        ws.onclose = () => setTimeout(connect, 3000);
+        ws.onclose = () => setTimeout(start, 2000);
     }
 
     function render() {
-        const users = [...new Set(msgList.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
-        document.getElementById('side').innerHTML = users.map(u => 
-            `<div class="utab ${u===activeId?'active':''}" onclick="activeId='${u}';render()">${u}</div>`
-        ).join("");
+        const users = [...new Set(msgs.map(m => m.from==='admin'?m.to:m.from))].filter(u => u !== 'admin');
+        document.getElementById('list').innerHTML = users.map(u => 
+            `<div style="padding:10px" class="${u===activeId?'active':''}" onclick="activeId='${u}';render()">${u}</div>`
+        ).join('');
 
-        if (!activeId) return;
-        document.getElementById('box').innerHTML = msgList.filter(m => m.from === activeId || m.to === activeId).map(m => `
-            <div class="row ${m.from==='admin'?'admin':'user'}">
-                <div class="bubble">${m.text}</div>
+        document.getElementById('box').innerHTML = msgs.filter(m => (m.from===activeId || m.to===activeId)).map(m => `
+            <div style="text-align:${m.from==='admin'?'right':'left'}; margin:5px;">
+                <span style="background:${m.from==='admin'?'#95ec69':'#fff'}; padding:5px; border-radius:3px; font-size:14px;">${m.text}</span>
             </div>
-        `).join("");
-        const box = document.getElementById('box');
-        box.scrollTop = box.scrollHeight;
+        `).join('');
+        const b = document.getElementById('box'); b.scrollTop = b.scrollHeight;
     }
 
     function send() {
         const i = document.getElementById('ipt');
-        if (!i.value.trim() || !activeId) return;
-        ws.send(JSON.stringify({ type: 'msg', from: 'admin', to: activeId, text: i.value }));
+        if (!activeId || !i.value) return;
+        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: i.value }));
         i.value = '';
     }
-    connect();
+    start();
 </script>
 </body>
 </html>
