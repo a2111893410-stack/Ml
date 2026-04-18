@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>客服管理</title>
+    <meta charset="UTF-8"><title>客服后台</title>
     <style>
         body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; }
-        #side { width: 160px; background: #333; color: #fff; overflow-y: auto; }
-        .user-tab { padding: 15px; border-bottom: 1px solid #444; cursor: pointer; font-size: 13px; }
-        .user-tab.active { background: #07c160; }
+        #side { width: 160px; background: #2c2c2c; color: #fff; overflow-y: auto; }
+        .utab { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; }
+        .utab.active { background: #07c160; }
         #main { flex: 1; display: flex; flex-direction: column; background: #eee; }
         #box { flex: 1; overflow-y: auto; padding: 20px; }
         .row { display: flex; margin-bottom: 10px; }
@@ -20,43 +20,32 @@
     <div id="main">
         <div id="box"></div>
         <div style="padding:15px; background:#fff; display:flex;">
-            <input id="ipt" style="flex:1; padding:10px;">
-            <button onclick="send()" style="width:80px; margin-left:10px;">回信</button>
+            <input id="ipt" style="flex:1; padding:10px;" placeholder="输入消息...">
+            <button onclick="send()" style="width:80px; margin-left:10px; background:#07c160; border:none; color:#fff;">回信</button>
         </div>
     </div>
-
 <script>
-    let activeId = ""; 
-    let msgList = [];
-    let ws;
+    let activeId = "", msgList = [], ws;
 
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com');
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
-            if (res.type === "history") {
-                msgList = res.data;
-            } else if (res.type === "new_msg") {
-                msgList.push(res.data);
-            }
-            renderAll();
+            if (res.type === "history") { msgList = res.data; }
+            else if (res.type === "new_msg") { msgList.push(res.data); }
+            render();
         };
-        ws.onclose = () => setTimeout(connect, 2000);
+        ws.onclose = () => setTimeout(connect, 3000);
     }
 
-    function renderAll() {
-        // 1. 提取所有非 admin 的用户 ID
-        const users = [...new Set(msgList.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u && u !== 'admin');
-        
-        // 2. 渲染左侧列表
+    function render() {
+        const users = [...new Set(msgList.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
         document.getElementById('side').innerHTML = users.map(u => 
-            `<div class="user-tab ${u===activeId?'active':''}" onclick="setActive('${u}')">${u}</div>`
+            `<div class="utab ${u===activeId?'active':''}" onclick="activeId='${u}';render()">${u}</div>`
         ).join("");
 
-        // 3. 渲染聊天框
         if (!activeId) return;
-        const currentChat = msgList.filter(m => m.from === activeId || m.to === activeId);
-        document.getElementById('box').innerHTML = currentChat.map(m => `
+        document.getElementById('box').innerHTML = msgList.filter(m => m.from === activeId || m.to === activeId).map(m => `
             <div class="row ${m.from==='admin'?'admin':'user'}">
                 <div class="bubble">${m.text}</div>
             </div>
@@ -65,15 +54,10 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    function setActive(id) {
-        activeId = id;
-        renderAll();
-    }
-
     function send() {
         const i = document.getElementById('ipt');
         if (!i.value.trim() || !activeId) return;
-        ws.send(JSON.stringify({ from: 'admin', to: activeId, text: i.value }));
+        ws.send(JSON.stringify({ type: 'msg', from: 'admin', to: activeId, text: i.value }));
         i.value = '';
     }
     connect();
