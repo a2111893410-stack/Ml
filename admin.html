@@ -1,76 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8"><title>客服后台</title>
+    <meta charset="UTF-8"><title>客服调试</title>
     <style>
-        body { display:flex; height:100vh; margin:0; font-family:sans-serif; }
-        #user_list { width:150px; background:#2c2c2c; color:#fff; overflow-y:auto; }
-        .user_item { padding:15px; border-bottom:1px solid #3d3d3d; cursor:pointer; font-size:13px; }
-        .user_item.active { background:#07c160; }
-        #chat_main { flex:1; display:flex; flex-direction:column; background:#eee; }
-        #chat_records { flex:1; overflow-y:auto; padding:15px; }
-        .line { display:flex; margin-bottom:10px; }
-        .line.admin { justify-content:flex-end; }
-        .bubble { padding:8px 12px; background:#fff; border-radius:5px; max-width:70%; font-size:14px; }
-        .admin .bubble { background:#95ec69; }
+        body { display:flex; height:100vh; margin:0; }
+        #side { width:120px; background:#222; color:#fff; padding:10px; font-size:12px; }
+        #main { flex:1; display:flex; flex-direction:column; }
+        #box { flex:1; overflow-y:auto; padding:10px; background:#f9f9f9; }
+        .admin-msg { text-align:right; color: blue; }
     </style>
 </head>
 <body>
-    <div id="user_list"></div>
-    <div id="chat_main">
-        <div id="chat_records"></div>
-        <div style="padding:10px; background:#fff; display:flex;">
-            <input id="reply_ipt" style="flex:1; padding:10px; border:1px solid #ddd;">
-            <button onclick="doReply()" style="width:80px; margin-left:10px; background:#07c160; color:#fff; border:none;">发送</button>
+    <div id="side">用户列表:<br></div>
+    <div id="main">
+        <div id="box"></div>
+        <div style="padding:10px; display:flex; border-top:1px solid #ddd;">
+            <input id="to" style="width:80px" placeholder="发送给ID">
+            <input id="ipt" style="flex:1" placeholder="消息内容">
+            <button onclick="send()">回信</button>
         </div>
     </div>
 <script>
-    let curId = '', allMsgs = [], ws;
+    let ws = new WebSocket('wss://page-c4hm.onrender.com');
+    const box = document.getElementById('box');
+    const side = document.getElementById('side');
+    const users = new Set();
 
-    function startService() {
-        ws = new WebSocket('wss://page-c4hm.onrender.com');
-        ws.onmessage = (e) => {
-            const res = JSON.parse(e.data);
-            if (res.type === "history") { allMsgs = res.data; }
-            else if (res.type === "new") { allMsgs.push(res.data); }
-            refreshUI();
-        };
-        ws.onclose = () => setTimeout(startService, 2000);
-    }
-
-    function refreshUI() {
-        const side = document.getElementById('user_list');
-        // 找出所有非 admin 的 ID
-        const users = [...new Set(allMsgs.map(m => 
-            String(m.from).toLowerCase() === 'admin' ? String(m.to).toLowerCase() : String(m.from).toLowerCase()
-        ))].filter(u => u !== 'admin');
-
-        side.innerHTML = users.map(u => 
-            `<div class="user_item ${u===curId?'active':''}" onclick="curId='${u}';refreshUI()">${u}</div>`
-        ).join('');
-
-        const box = document.getElementById('chat_records');
-        if (!curId) { box.innerHTML = '<div style="color:#999;text-align:center;margin-top:20px;">请选择左侧用户</div>'; return; }
-
-        box.innerHTML = allMsgs.filter(m => {
-            const f = String(m.from).toLowerCase();
-            const t = String(m.to).toLowerCase();
-            return (f === curId || t === curId);
-        }).map(m => `
-            <div class="line ${String(m.from).toLowerCase()==='admin'?'admin':'user'}">
-                <div class="bubble">${m.text}</div>
-            </div>
-        `).join('');
+    ws.onmessage = (e) => {
+        const res = JSON.parse(e.data);
+        const data = res.type === "history" ? res.data : [res.data];
+        
+        data.forEach(m => {
+            if(m.from !== 'admin') {
+                users.add(m.from);
+                updateSide();
+            }
+            const div = document.createElement('div');
+            div.style.borderBottom = "1px solid #eee";
+            div.innerHTML = `<b>${m.from}</b> -> <b>${m.to}</b>: ${m.text}`;
+            box.appendChild(div);
+        });
         box.scrollTop = box.scrollHeight;
+    };
+
+    function updateSide() {
+        side.innerHTML = "用户列表:<br>" + Array.from(users).join("<br>");
     }
 
-    function doReply() {
-        const ipt = document.getElementById('reply_ipt');
-        if (!curId || !ipt.value.trim()) return;
-        ws.send(JSON.stringify({ from: 'admin', to: curId, text: ipt.value.trim(), type: 'msg' }));
-        ipt.value = '';
+    function send() {
+        const to = document.getElementById('to').value;
+        const ipt = document.getElementById('ipt').value;
+        if(!to || !ipt) return alert("请填写ID和内容");
+        ws.send(JSON.stringify({ from: 'admin', to: to, text: ipt }));
+        document.getElementById('ipt').value = '';
     }
-    startService();
 </script>
 </body>
 </html>
