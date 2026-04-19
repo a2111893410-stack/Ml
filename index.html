@@ -1,69 +1,86 @@
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>在线客服</title>
     <style>
-        /* --- 基础锁定：稳字当头 --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; padding: 0; height: 100dvh; width: 100vw; 
             background: #ededed; font-family: -apple-system, sans-serif; 
             display: flex; flex-direction: column; overflow: hidden; position: fixed; 
         }
-        
-        #header-wrapper {
-            background: #ededed; border-bottom: 1px solid #dcdcdc;
-            padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 10;
-        }
-        #header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 17px; font-weight: 500; }
-        .head-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-        #status-bar { width: 100%; text-align: center; color: #b2b2b2; font-size: 12px; padding: 2px 0; }
 
-        #chat { 
-            flex: 1; 
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; 
-            background: #ededed;
-            position: relative;
-        }
+```
+    #header-wrapper {
+        background: #ededed; border-bottom: 1px solid #dcdcdc;
+        padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 10;
+    }
+    #header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 17px; font-weight: 500; }
+    .head-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    #status-bar { width: 100%; text-align: center; color: #b2b2b2; font-size: 12px; padding: 2px 0; }
 
-        #chat-inner { 
-            padding: 12px; 
-            min-height: calc(100% + 1px); 
-            display: flex; 
-            flex-direction: column; 
-        }
+    #chat { 
+        flex: 1; 
+        overflow-y: auto; 
+        -webkit-overflow-scrolling: touch; 
+        background: #ededed;
+        position: relative;
+    }
 
-        .msg-row { margin-bottom: 16px; display: flex; align-items: flex-start; flex-shrink: 0; }
-        .msg-row.me { flex-direction: row-reverse; }
-        
-        .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; flex-shrink: 0; background-size: cover; }
-        .me .avatar { margin-left: 12px; background-image: url('https://dummyimage.com/100/95ec69/fff&text=我'); }
-        .visitor .avatar { margin-right: 12px; background-image: url('https://dummyimage.com/100/fff/333&text=客'); }
+    #chat-inner { 
+        padding: 12px; 
+        min-height: calc(100% + 1px); 
+        display: flex; 
+        flex-direction: column; 
+    }
 
-        .bubble-txt { position: relative; padding: 10px 14px; font-size: 16px; line-height: 1.5; border-radius: 6px; max-width: calc(100% - 110px); word-wrap: break-word; min-height: 40px; }
-        .visitor .bubble-txt { background: #fff; color: #000; }
-        .visitor .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #fff; left: -8px; top: 14px; }
-        .me .bubble-txt { background: #95ec69; color: #000; }
-        .me .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #95ec69; right: -8px; top: 14px; }
+    .msg-row { margin-bottom: 16px; display: flex; align-items: flex-start; flex-shrink: 0; }
+    .msg-row.me { flex-direction: row-reverse; }
+    
+    .avatar { width: 40px; height: 40px; border-radius: 4px; background: #fff; flex-shrink: 0; background-size: cover; }
+    .me .avatar { margin-left: 12px; background-image: url('https://dummyimage.com/100/95ec69/fff&text=我'); }
+    .visitor .avatar { margin-right: 12px; background-image: url('https://dummyimage.com/100/fff/333&text=客'); }
 
-        .msg-img-wrap { max-width: 160px; margin: 0; }
-        .msg-img { width: 100%; border-radius: 4px; cursor: pointer; display: block; border: 0.5px solid #dcdcdc; }
+    .bubble-txt { position: relative; padding: 10px 14px; font-size: 16px; line-height: 1.5; border-radius: 6px; max-width: calc(100% - 110px); word-wrap: break-word; min-height: 40px; }
+    .visitor .bubble-txt { background: #fff; color: #000; }
+    .visitor .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #fff; left: -8px; top: 14px; }
+    .me .bubble-txt { background: #95ec69; color: #000; }
+    .me .bubble-txt::before { content: ""; position: absolute; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #95ec69; right: -8px; top: 14px; }
 
-        #footer { 
-            background: #f7f7f7; border-top: 1px solid #dcdcdc; 
-            padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); 
-            display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0; z-index: 10;
-        }
-        .btn-plus { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-bottom: 2px; }
-        textarea { flex: 1; min-height: 38px; max-height: 120px; border: none; background: #fff; border-radius: 6px; padding: 8px 12px; font-size: 16px; outline: none; resize: none; -webkit-appearance: none; caret-color: #07c160; }
-        .btn-send { background: #07c160; color: #fff; border: none; border-radius: 4px; padding: 0 15px; height: 36px; font-size: 15px; cursor: pointer; flex-shrink: 0; margin-bottom: 1px; }
+    /* 发送失败气泡样式 */
+    .bubble-txt.error { background: #ffdddd; }
+    .bubble-txt.error::before { border-left-color: #ffdddd; }
+    .send-fail-tip { font-size: 12px; color: #e74c3c; margin-top: 4px; text-align: right; }
 
-        #img-viewer { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 100; display: none; align-items: center; justify-content: center; }
-        #img-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    </style>
+    .msg-img-wrap { max-width: 160px; margin: 0; }
+    .msg-img { width: 100%; border-radius: 4px; cursor: pointer; display: block; border: 0.5px solid #dcdcdc; }
+
+    #footer { 
+        background: #f7f7f7; border-top: 1px solid #dcdcdc; 
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); 
+        display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0; z-index: 10;
+    }
+    .btn-plus { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-bottom: 2px; }
+    textarea { flex: 1; min-height: 38px; max-height: 120px; border: none; background: #fff; border-radius: 6px; padding: 8px 12px; font-size: 16px; outline: none; resize: none; -webkit-appearance: none; caret-color: #07c160; }
+    .btn-send { background: #07c160; color: #fff; border: none; border-radius: 4px; padding: 0 15px; height: 36px; font-size: 15px; cursor: pointer; flex-shrink: 0; margin-bottom: 1px; }
+
+    /* 顶部 Toast 提示 */
+    #toast {
+        position: fixed; top: calc(60px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.72); color: #fff; padding: 7px 18px;
+        border-radius: 20px; font-size: 14px; z-index: 200;
+        opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    #img-viewer { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 100; display: none; align-items: center; justify-content: center; }
+    #img-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+</style>
+```
+
 </head>
 <body>
 
@@ -89,6 +106,7 @@
     <button class="btn-send" onclick="sendMsg()">发送</button>
 </div>
 
+<div id="toast"></div>
 <div id="img-viewer" onclick="this.style.display='none'"><img src="" id="viewer-img"></div>
 
 <script>
@@ -99,6 +117,21 @@
     const chatContainer = document.getElementById('chat');
     const chatInner = document.getElementById('chat-inner');
     const iptBox = document.getElementById('ipt');
+
+    // ── Toast 提示 ──────────────────────────────────────────
+    let toastTimer = null;
+    function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    // ── 判断 WebSocket 是否可用 ──────────────────────────────
+    function isConnected() {
+        return ws && ws.readyState === WebSocket.OPEN;
+    }
 
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com'); 
@@ -114,7 +147,7 @@
         };
     }
 
-    // --- 【修复重点：增加图片加载监听】 ---
+    // ── 【修复2】renderMsg：图片 onload 只在这里设置一次，不在 scrollToBottom 里重复挂载 ──
     function renderMsg(m) {
         const isMe = String(m.from).toLowerCase() === myId;
         const div = document.createElement('div');
@@ -130,8 +163,8 @@
             const img = document.createElement('img');
             img.className = 'msg-img';
             img.src = m.text;
-            // 核心：图片加载完后再触发一次滚动，防止掉到底部下方
-            img.onload = () => scrollToBottom(); 
+            // 图片加载完成后再滚一次，确保滚到底
+            img.onload = () => scrollToBottom();
             img.onclick = (e) => { e.stopPropagation(); showFullImage(m.text); };
             wrap.appendChild(img);
             div.appendChild(wrap);
@@ -155,9 +188,17 @@
         setTimeout(() => { window.scrollTo(0, 0); }, 100);
     });
 
+    // ── 【修复4】发图片前检查连接状态 ──────────────────────────
     function directSendImg(el) {
         const file = el.files[0];
-        if(!file) return;
+        if (!file) return;
+
+        // 先检查连接
+        if (!isConnected()) {
+            showToast('发送失败，网络未连接');
+            el.value = '';
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -177,8 +218,11 @@
                 ctx.drawImage(img, 0, 0, width, height);
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 
-                if (ws && ws.readyState === WebSocket.OPEN) {
+                // 压缩完再次确认连接（避免压缩期间断线）
+                if (isConnected()) {
                     ws.send(JSON.stringify({ from: myId, to: 'admin', text: compressedBase64, type: 'img' }));
+                } else {
+                    showToast('发送失败，请重试');
                 }
                 el.value = '';
             };
@@ -191,31 +235,31 @@
         document.getElementById('img-viewer').style.display = 'flex';
     }
 
+    // ── 【修复4】发文字前检查连接状态 ──────────────────────────
     function sendMsg() {
         const text = iptBox.value.trim();
-        if(!text) return;
-        ws.send(JSON.stringify({ from: myId, to: 'admin', text: text, type: 'text' }));
-        iptBox.value = '';
-        iptBox.style.height = '38px';
-        scrollToBottom();
+        if (!text) return;
+
+        if (!isConnected()) {
+            showToast('发送失败，网络未连接');
+            return;
+        }
+
+        try {
+            ws.send(JSON.stringify({ from: myId, to: 'admin', text: text, type: 'text' }));
+            iptBox.value = '';
+            iptBox.style.height = '38px';
+            scrollToBottom();
+        } catch (err) {
+            showToast('发送失败，请重试');
+        }
     }
 
-    // --- 【修复重点：多重滚动保障机制】 ---
+    // ── 【修复2】scrollToBottom：不再重复挂载图片 onload ──────
     function scrollToBottom() {
         if (!chatContainer) return;
-        
-        // 1. 立即滚到底部
         chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        // 2. 针对可能还在加载中的图片进行防抖补滚
-        const imgs = chatInner.querySelectorAll('.msg-img');
-        imgs.forEach(img => {
-            if (!img.complete) { // 如果图片还没加载完，挂载 onload
-                img.onload = () => { chatContainer.scrollTop = chatContainer.scrollHeight; };
-            }
-        });
-
-        // 3. 延时二次兜底（防止软键盘回弹或DOM渲染滞后）
+        // 延时兜底（防止软键盘回弹或 DOM 渲染滞后）
         setTimeout(() => {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }, 100);
@@ -233,5 +277,6 @@
 
     connect();
 </script>
+
 </body>
 </html>
