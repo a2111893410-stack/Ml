@@ -7,10 +7,11 @@
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            margin: 0; padding: 0; height: 100dvh; width: 100vw; 
-            background: #ededed; font-family: -apple-system, sans-serif; 
-            display: flex; flex-direction: column; overflow: hidden; position: fixed; 
-        }
+    margin: 0; padding: 0; height: 100dvh; width: 100vw; 
+    background: #ededed; font-family: -apple-system, sans-serif; 
+    display: flex; flex-direction: column; overflow: hidden; 
+    overscroll-behavior: none; /* 替代 fixed，同样能防止页面整体下拉回弹 */
+}
 
         #header-wrapper {
             background: #ededed; border-bottom: 1px solid #dcdcdc;
