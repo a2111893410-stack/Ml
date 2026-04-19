@@ -148,7 +148,12 @@
     }
 
     function msgKey(m) {
-        return `${m.from}_${m.to}_${(m.text || '').slice(0, 20)}_${m.time || ''}`;
+        const txt = m.text || '';
+        // 图片是 base64，开头都一样（/9j/4AAQ...），必须用末尾字符区分
+        const sample = m.type === 'img'
+            ? txt.slice(-20)
+            : txt.slice(0, 20);
+        return `${m.from}_${m.to}_${m.type}_${sample}_${m.time || ''}`;
     }
 
     function markOnline(uid) {
