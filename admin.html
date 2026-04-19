@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>WeChat客服 - 专家版</title>
+    <title>WeChat客服 - 专家管理端</title>
     <style>
-        /* CSS 样式与之前完全一致，未作删减 */
+        /* --- 基础锁定：管理端专用布局 --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; padding: 0; height: 100dvh; width: 100vw; 
@@ -22,8 +22,9 @@
 
         #container { flex: 1; display: flex; overflow: hidden; }
 
+        /* 左侧用户列表 */
         #side-list { 
-            width: 70px; background: #ededed; display: flex; flex-direction: column; 
+            width: 85px; background: #ededed; display: flex; flex-direction: column; 
             flex-shrink: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
             border-right: 1px solid #dcdcdc; 
         }
@@ -44,6 +45,7 @@
             font-size: 10px; padding: 0 4px; 
         }
 
+        /* 右侧聊天区 */
         #chat-area { flex: 1; background: #ededed; display: flex; flex-direction: column; overflow: hidden; }
         #box { flex: 1; overflow-y: auto; padding: 15px 10px; -webkit-overflow-scrolling: touch; }
 
@@ -51,16 +53,19 @@
         .msg-row.admin { flex-direction: row-reverse; }
         .avatar { width: 38px; height: 38px; border-radius: 4px; background: #fff; flex-shrink: 0; overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
         .bubble-txt { 
-            position: relative; max-width: 65%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; 
+            position: relative; max-width: 70%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; 
             margin: 0 10px; min-height: 38px; word-wrap: break-word;
         }
         .visitor .bubble-txt { background: #fff; }
         .visitor .bubble-txt::before { content: ""; position: absolute; left: -9px; top: 12px; border: 5px solid transparent; border-right-color: #fff; }
         .admin .bubble-txt { background: #95ec69; }
         .admin .bubble-txt::before { content: ""; position: absolute; right: -9px; top: 12px; border: 5px solid transparent; border-left-color: #95ec69; }
+        
         .bubble-img { max-width: 160px; border-radius: 4px; margin: 0 10px; border: 1px solid #dcdcdc; display: block; }
 
+        /* 底部输入框 */
         #footer { 
             background: #f7f7f7; border-top: 1px solid #dcdcdc; 
             padding: 8px 10px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
@@ -79,6 +84,7 @@
             border: none; border-radius: 4px; font-weight: bold; margin-bottom: 2px;
         }
 
+        /* 图片查看器 */
         #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; align-items: center; justify-content: center; z-index: 100; }
         #viewer img { max-width: 100%; max-height: 100%; }
     </style>
@@ -112,27 +118,28 @@
 <div id="viewer" onclick="this.style.display='none'"><img id="viewer-img"></div>
 
 <script>
-    // 【修复2】：从 localStorage 读取未读记录，如果没有则为空对象
+    // 未读消息逻辑
     let unreadMap = JSON.parse(localStorage.getItem('wepro_unread') || '{}');
-    
     let activeId = "", allMsgs = [], ws;
     const ipt = document.getElementById('ipt');
     const box = document.getElementById('box');
     let onlineStatus = {}; 
 
+    // 生成简易昵称
     function getShortName(id) {
         let num = id.replace(/[^0-9]/g, "").slice(-1) || "1";
         const names = ["访客", "用户", "客户", "咨询", "买家"];
         return names[id.length % names.length] + num;
     }
 
+    // WebSocket 连接
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com'); 
 
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
             
-            // 【修复1】：收到历史记录时，彻底清空现有消息数组，防止重复
+            // 历史记录去重修复
             if (res.type === "history") {
                 allMsgs = []; 
             }
@@ -143,9 +150,7 @@
                 const from = String(m.from).toLowerCase();
                 if (from !== 'admin') {
                     onlineStatus[from] = true; 
-                    
                     if (from !== activeId && res.type !== "history") {
-                        // 【修复2】：新增未读消息并存入本地存储
                         unreadMap[from] = (unreadMap[from] || 0) + 1;
                         localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
                     }
@@ -156,6 +161,7 @@
         ws.onclose = () => { setTimeout(connect, 3000); };
     }
 
+    // 渲染 UI
     function render() {
         const users = [...new Set(allMsgs.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
         
@@ -180,20 +186,18 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    // 切换用户
     function selectUser(id) {
         activeId = id.toLowerCase();
-        
-        // 【修复2】：点击用户后清零该用户的未读数，并同步到本地存储
         unreadMap[id] = 0;
         localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
-        
         render();
         setTimeout(() => ipt.focus(), 100);
     }
 
     function dismissKeyboard() { ipt.blur(); }
 
-    // 【修复3】：iOS 键盘收起和弹起时的强行位移纠正
+    // 键盘位移修复
     ipt.addEventListener('focus', () => {
         setTimeout(() => { box.scrollTop = box.scrollHeight; }, 300);
     });
@@ -205,21 +209,50 @@
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
     }
 
+    // 发送文本
     function sendText() {
         const val = ipt.value.trim();
         if (!activeId || !val) return;
         ws.send(JSON.stringify({ from: 'admin', to: activeId, text: val, type: 'text' }));
         ipt.value = '';
         ipt.style.height = '40px';
+        box.scrollTop = box.scrollHeight;
     }
 
+    // --- 【新增：图片瘦身引擎】 ---
     function directSendImg(el) {
         const file = el.files[0];
         if (!file || !activeId) return;
+
         const reader = new FileReader();
         reader.onload = (e) => {
-            ws.send(JSON.stringify({ from: 'admin', to: activeId, text: e.target.result, type: 'img' }));
-            el.value = '';
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                // 压缩门槛：最大宽度 1000px
+                const maxWidth = 1000;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 核心压缩：转为 jpeg，质量 0.7
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ from: 'admin', to: activeId, text: compressedBase64, type: 'img' }));
+                }
+                el.value = ''; // 清空选择
+            };
         };
         reader.readAsDataURL(file);
     }
