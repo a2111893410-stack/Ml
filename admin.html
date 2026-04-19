@@ -5,86 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <title>WeChat客服 - 专家管理端</title>
     <style>
-        /* --- 基础锁定：管理端专用布局 --- */
+        /* 样式保持不变，确保布局稳定 */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            margin: 0; padding: 0; height: 100dvh; width: 100vw; 
-            display: flex; flex-direction: column; background: #ededed; 
-            font-family: -apple-system, sans-serif; overflow: hidden; position: fixed; 
-        }
-
-        #header { 
-            height: 44px; background: #ededed; border-bottom: 1px solid #dcdcdc; 
-            display: flex; align-items: center; justify-content: space-between; 
-            padding: 0 15px; flex-shrink: 0; font-size: 17px; font-weight: 500;
-            padding-top: env(safe-area-inset-top);
-        }
-
+        body { margin: 0; padding: 0; height: 100dvh; width: 100vw; display: flex; flex-direction: column; background: #ededed; font-family: -apple-system, sans-serif; overflow: hidden; position: fixed; }
+        #header { height: 44px; background: #ededed; border-bottom: 1px solid #dcdcdc; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; font-size: 17px; font-weight: 500; padding-top: env(safe-area-inset-top); }
         #container { flex: 1; display: flex; overflow: hidden; }
-
-        /* 左侧用户列表 */
-        #side-list { 
-            width: 85px; background: #ededed; display: flex; flex-direction: column; 
-            flex-shrink: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
-            border-right: 1px solid #dcdcdc; 
-        }
-        .u-item { 
-            padding: 12px 2px; text-align: center; color: #333; cursor: pointer; 
-            font-size: 13px; position: relative; border-bottom: 1px solid #e0e0e0; 
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-        }
+        #side-list { width: 85px; background: #ededed; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; border-right: 1px solid #dcdcdc; }
+        .u-item { padding: 12px 2px; text-align: center; color: #333; cursor: pointer; font-size: 13px; position: relative; border-bottom: 1px solid #e0e0e0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .u-item.active { background: #e2e2e2; font-weight: bold; }
-        
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .online { background: #07c160; box-shadow: 0 0 4px #07c160; }
         .offline { background: #b2b2b2; }
-
-        .badge { 
-            position: absolute; top: 2px; right: 2px; background: #fa5151; color: white; 
-            border-radius: 10px; min-width: 16px; height: 16px; line-height: 16px; 
-            font-size: 10px; padding: 0 4px; 
-        }
-
-        /* 右侧聊天区 */
+        .badge { position: absolute; top: 2px; right: 2px; background: #fa5151; color: white; border-radius: 10px; min-width: 16px; height: 16px; line-height: 16px; font-size: 10px; padding: 0 4px; }
         #chat-area { flex: 1; background: #ededed; display: flex; flex-direction: column; overflow: hidden; }
         #box { flex: 1; overflow-y: auto; padding: 15px 10px; -webkit-overflow-scrolling: touch; }
-
         .msg-row { display: flex; margin-bottom: 16px; align-items: flex-start; }
         .msg-row.admin { flex-direction: row-reverse; }
         .avatar { width: 38px; height: 38px; border-radius: 4px; background: #fff; flex-shrink: 0; overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .bubble-txt { 
-            position: relative; max-width: 70%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; 
-            margin: 0 10px; min-height: 38px; word-wrap: break-word;
-        }
+        .bubble-txt { position: relative; max-width: 70%; padding: 10px 12px; font-size: 16px; line-height: 1.4; border-radius: 6px; margin: 0 10px; min-height: 38px; word-wrap: break-word; }
         .visitor .bubble-txt { background: #fff; }
         .visitor .bubble-txt::before { content: ""; position: absolute; left: -9px; top: 12px; border: 5px solid transparent; border-right-color: #fff; }
         .admin .bubble-txt { background: #95ec69; }
         .admin .bubble-txt::before { content: ""; position: absolute; right: -9px; top: 12px; border: 5px solid transparent; border-left-color: #95ec69; }
-        
         .bubble-img { max-width: 160px; border-radius: 4px; margin: 0 10px; border: 1px solid #dcdcdc; display: block; }
-
-        /* 底部输入框 */
-        #footer { 
-            background: #f7f7f7; border-top: 1px solid #dcdcdc; 
-            padding: 8px 10px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
-            flex-shrink: 0;
-        }
+        #footer { background: #f7f7f7; border-top: 1px solid #dcdcdc; padding: 8px 10px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); flex-shrink: 0; }
         #input-row { display: flex; align-items: flex-end; gap: 8px; }
-        #ipt { 
-            flex: 1; border: none; background: #fff; border-radius: 4px; 
-            padding: 10px; font-size: 16px; outline: none; 
-            min-height: 40px; max-height: 100px; resize: none;
-            -webkit-appearance: none;
-        }
+        #ipt { flex: 1; border: none; background: #fff; border-radius: 4px; padding: 10px; font-size: 16px; outline: none; min-height: 40px; max-height: 100px; resize: none; -webkit-appearance: none; }
         .icon-btn { width: 32px; height: 32px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .send-btn { 
-            height: 36px; padding: 0 15px; background: #07c160; color: #fff; 
-            border: none; border-radius: 4px; font-weight: bold; margin-bottom: 2px;
-        }
-
-        /* 图片查看器 */
+        .send-btn { height: 36px; padding: 0 15px; background: #07c160; color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 2px; }
         #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; align-items: center; justify-content: center; z-index: 100; }
         #viewer img { max-width: 100%; max-height: 100%; }
     </style>
@@ -118,41 +67,50 @@
 <div id="viewer" onclick="this.style.display='none'"><img id="viewer-img"></div>
 
 <script>
-    // 未读消息逻辑
-    let unreadMap = JSON.parse(localStorage.getItem('wepro_unread') || '{}');
+    // --- 【核心逻辑改进】 ---
+    // 1. lastReadMap: 记录每个用户最后一次被点击（阅读）的时间戳
+    let lastReadMap = JSON.parse(localStorage.getItem('wepro_lastread') || '{}');
+    let unreadMap = {}; // 每次根据历史记录动态生成
+    
     let activeId = "", allMsgs = [], ws;
     const ipt = document.getElementById('ipt');
     const box = document.getElementById('box');
     let onlineStatus = {}; 
 
-    // 生成简易昵称
     function getShortName(id) {
         let num = id.replace(/[^0-9]/g, "").slice(-1) || "1";
         const names = ["访客", "用户", "客户", "咨询", "买家"];
         return names[id.length % names.length] + num;
     }
 
-    // WebSocket 连接
     function connect() {
         ws = new WebSocket('wss://page-c4hm.onrender.com'); 
 
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
             
-            // 历史记录去重修复
             if (res.type === "history") {
                 allMsgs = []; 
+                unreadMap = {}; // 重连或加载历史时重置未读数
             }
 
             const msgs = res.type === "history" ? res.data : [res.data];
+            
             msgs.forEach(m => {
                 allMsgs.push(m);
-                const from = String(m.from).toLowerCase();
-                if (from !== 'admin') {
-                    onlineStatus[from] = true; 
-                    if (from !== activeId && res.type !== "history") {
-                        unreadMap[from] = (unreadMap[from] || 0) + 1;
-                        localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
+                const uid = String(m.from === 'admin' ? m.to : m.from).toLowerCase();
+                
+                // 离线未读逻辑：
+                // 如果消息不是 admin 发的，且 (消息时间戳 > 上次阅读时间 或 还没读过)
+                if (m.from !== 'admin') {
+                    onlineStatus[uid] = true; 
+                    
+                    // 获取该用户的最后阅读时间（如果没有记录，默认为0）
+                    const lastRead = lastReadMap[uid] || 0;
+                    const msgTime = m.time || Date.now(); // 假设服务器带了 time 字段
+
+                    if (uid !== activeId && msgTime > lastRead) {
+                        unreadMap[uid] = (unreadMap[uid] || 0) + 1;
                     }
                 }
             });
@@ -161,7 +119,6 @@
         ws.onclose = () => { setTimeout(connect, 3000); };
     }
 
-    // 渲染 UI
     function render() {
         const users = [...new Set(allMsgs.map(m => m.from === 'admin' ? m.to : m.from))].filter(u => u !== 'admin');
         
@@ -186,72 +143,62 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    // 切换用户
     function selectUser(id) {
         activeId = id.toLowerCase();
-        unreadMap[id] = 0;
-        localStorage.setItem('wepro_unread', JSON.stringify(unreadMap));
+        
+        // 更新阅读时间并持久化
+        lastReadMap[activeId] = Date.now();
+        localStorage.setItem('wepro_lastread', JSON.stringify(lastReadMap));
+        
+        // 清除当前未读状态
+        unreadMap[activeId] = 0;
+        
         render();
         setTimeout(() => ipt.focus(), 100);
     }
 
     function dismissKeyboard() { ipt.blur(); }
 
-    // 键盘位移修复
-    ipt.addEventListener('focus', () => {
-        setTimeout(() => { box.scrollTop = box.scrollHeight; }, 300);
-    });
-    ipt.addEventListener('blur', () => {
-        setTimeout(() => { window.scrollTo(0, 0); }, 100);
-    });
-
     function handleKeyDown(e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
     }
 
-    // 发送文本
     function sendText() {
         const val = ipt.value.trim();
         if (!activeId || !val) return;
         ws.send(JSON.stringify({ from: 'admin', to: activeId, text: val, type: 'text' }));
         ipt.value = '';
         ipt.style.height = '40px';
-        box.scrollTop = box.scrollHeight;
+        
+        // 发送时也更新自己的阅读时间，防止自己发的消息干扰逻辑
+        lastReadMap[activeId] = Date.now();
+        localStorage.setItem('wepro_lastread', JSON.stringify(lastReadMap));
     }
 
-    // --- 【新增：图片瘦身引擎】 ---
+    // 图片压缩功能保留
     function directSendImg(el) {
         const file = el.files[0];
         if (!file || !activeId) return;
-
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.src = e.target.result;
             img.onload = () => {
-                // 压缩门槛：最大宽度 1000px
                 const maxWidth = 1000;
-                let width = img.width;
-                let height = img.height;
-
+                let width = img.width, height = img.height;
                 if (width > maxWidth) {
                     height = (maxWidth / width) * height;
                     width = maxWidth;
                 }
-
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
-                // 核心压缩：转为 jpeg，质量 0.7
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ from: 'admin', to: activeId, text: compressedBase64, type: 'img' }));
                 }
-                el.value = ''; // 清空选择
+                el.value = '';
             };
         };
         reader.readAsDataURL(file);
