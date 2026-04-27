@@ -147,15 +147,25 @@
         ws.onmessage = (e) => {
             const res = JSON.parse(e.data);
 
-            // ── 修复：拦截“正在输入”状态，防止渲染出空白气泡 ──
+                        // ── 修复：拦截"正在输入"状态，防止渲染出空白气泡 ──
             if (res.type === "typing" && res.to === myId) {
                 statusBar.innerText = "客服正在输入...";
                 statusBar.style.color = "#07c160";
                 return; 
             }
 
+            // ── 收到清空指令：清除本地聊天记录 ──
+            if (res.type === "clear") {
+                const uid = String(res.to || '').toLowerCase();
+                if (uid === myId) {
+                    chatInner.innerHTML = '';
+                }
+                return;
+            }
+
             // 收到任何其他消息，恢复连接状态
             if (statusBar.innerText.includes("输入")) {
+
                 statusBar.innerText = "已连接";
                 statusBar.style.color = "#b2b2b2";
             }
